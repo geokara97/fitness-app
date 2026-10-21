@@ -37,20 +37,24 @@
                     <input type="date" id="w-date" required>
                 </div>
                 <div class="form-group">
-                    <label for="w-split" data-i18n="wo.split">Split</label>
-                    <select id="w-split"></select>
-                </div>
-                <div class="form-group">
                     <label for="w-bodyweight" data-i18n="wo.bodyweight">Bodyweight (kg)</label>
                     <input type="number" id="w-bodyweight" step="0.1">
                 </div>
+            </div>
+            <div class="form-group mb-0">
+                <label data-i18n="wo.splits">Splits — pick one or more</label>
+                <div class="chips" id="w-splits" role="group"></div>
+                <div class="hint" id="w-splits-hint"></div>
             </div>
         </div>
 
         <!-- Exercises -->
         <div class="section-title" data-i18n="wo.exercises">🏋️ Exercises</div>
         <div id="exercises"></div>
-        <button class="btn btn-ghost" id="btn-add-exercise" data-i18n="wo.addExercise">+ Add Exercise</button>
+        <div class="btn-row">
+            <button class="btn btn-ghost" id="btn-add-exercise" data-i18n="wo.addExercise">+ Add Exercise</button>
+            <button class="btn btn-ghost" id="btn-new-exercise" data-i18n="wo.newExercise">✏️ Create new exercise</button>
+        </div>
 
         <div class="card" style="margin-top:16px">
             <div class="form-group">
@@ -58,6 +62,29 @@
                 <textarea id="w-notes" rows="2" placeholder="How did it feel?" data-i18n-placeholder="wo.notesPh"></textarea>
             </div>
             <button class="btn btn-primary btn-lg btn-block" id="btn-save" data-i18n="wo.save">Finish & Save Workout</button>
+        </div>
+    </div>
+
+    <!-- New exercise modal -->
+    <div class="modal" id="exercise-modal" role="dialog" aria-modal="true" aria-labelledby="exercise-modal-title">
+        <div class="modal-box">
+            <span class="modal-close" id="exercise-modal-close" aria-label="Close">×</span>
+            <h3 id="exercise-modal-title" data-i18n="wo.nxTitle">Create a new exercise</h3>
+            <form id="exercise-form">
+                <div class="form-group">
+                    <label for="nx-name-en" data-i18n="wo.nxNameEn">Name (English)</label>
+                    <input type="text" id="nx-name-en" required maxlength="100" placeholder="e.g. Cable Fly" data-i18n-placeholder="wo.nxNamePh">
+                </div>
+                <div class="form-group">
+                    <label for="nx-name-el" data-i18n="wo.nxNameEl">Name (Greek) — optional</label>
+                    <input type="text" id="nx-name-el" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="wo.nxSplits">Belongs to these splits</label>
+                    <div class="slot-checks" id="nx-splits"></div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="nx-save" data-i18n="wo.nxSave">Save exercise</button>
+            </form>
         </div>
     </div>
 

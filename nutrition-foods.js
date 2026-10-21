@@ -100,7 +100,7 @@ function foodRow(f) {
             </div>
             <div class="pref-btns">
                 ${btn('like')}${btn('dislike')}${btn('allergy')}
-                ${f.is_custom ? `<button type="button" class="icon-btn" data-del="${f.food_id}" title="${escapeHtml(t('common.delete'))}">×</button>` : ''}
+                <button type="button" class="icon-btn" data-del="${f.food_id}" title="${escapeHtml(t('common.delete'))}">×</button>
             </div>
         </div>`;
 }

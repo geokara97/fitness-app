@@ -461,7 +461,26 @@ td.num, th.num { text-align: right; }
 .slot-checks label { display: flex; align-items: center; gap: 6px; font-weight: 500; margin: 0; }
 .slot-checks input { width: auto; }
 
+/* ---- Workout: split chips ---------------------------------- */
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font: inherit;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+}
+.chip:hover { border-color: var(--primary); }
+.chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.chip.active::before { content: '✓ '; }
+
 /* ---- Misc -------------------------------------------------- */
+.mb-0 { margin-bottom: 0; }
 .empty {
     text-align: center;
     padding: 40px 20px;

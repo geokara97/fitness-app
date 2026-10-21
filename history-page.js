@@ -15,8 +15,8 @@ function durationLabel(seconds) {
 
 async function loadHistory() {
     const { data, error } = await db.from('workouts')
-        .select(`*, splits(split_name),
-                 workout_exercises(*, exercises(exercise_name))`)
+        .select(`*, workout_splits(splits(split_name, split_name_el, sort_order)),
+                 workout_exercises(*, exercises(exercise_name, exercise_name_el))`)
         .order('workout_date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -53,7 +53,9 @@ function renderWorkout(w) {
         if (!groups[key]) {
             groups[key] = {
                 order: we.exercise_order || 0,
-                name: we.exercises ? we.exercises.exercise_name : t('hist.exercise'),
+                name: we.exercises
+                    ? ((LANG === 'el' && we.exercises.exercise_name_el) || we.exercises.exercise_name)
+                    : t('hist.exercise'),
                 sets: [],
             };
         }
@@ -61,11 +63,17 @@ function renderWorkout(w) {
     });
     const exList = Object.values(groups).sort((a, b) => a.order - b.order);
 
+    const splitBadges = (w.workout_splits || [])
+        .map(ws => ws.splits).filter(Boolean)
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(s => `<span class="badge blue" style="margin-left:6px">${escapeHtml((LANG === 'el' && s.split_name_el) || s.split_name)}</span>`)
+        .join('');
+
     const exHtml = exList.length ? `
         <div class="exercise-list" style="margin-top:10px">
             ${exList.map(ex => `
                 <div style="margin-bottom:8px">
-                    <strong>${ex.name}</strong>
+                    <strong>${escapeHtml(ex.name)}</strong>
                     <div class="muted text-sm">
                         ${ex.sets.sort((a, b) => (a.set_number || 0) - (b.set_number || 0))
                             .map((s, i) => t('hist.set', { n: s.set_number || i + 1, reps: s.reps || '–' }) + (s.weight ? ' × ' + s.weight + ' kg' : ''))
@@ -79,7 +87,7 @@ function renderWorkout(w) {
             <div class="flex-between">
                 <div>
                     <strong style="font-size:1.05rem">${formatDate(w.workout_date)}</strong>
-                    ${w.splits ? `<span class="badge blue" style="margin-left:6px">${w.splits.split_name}</span>` : ''}
+                    ${splitBadges}
                 </div>
                 <button class="icon-btn" title="${t('common.delete')}" onclick="deleteWorkout(${w.workout_id})">×</button>
             </div>
@@ -88,7 +96,7 @@ function renderWorkout(w) {
                 <div class="stat"><div class="label">${t('common.caloriesBurned')}</div><div class="value" style="font-size:1.2rem">🔥 ${round(w.calories_burned)}</div></div>
                 <div class="stat"><div class="label">${t('hist.bodyweight')}</div><div class="value" style="font-size:1.2rem">${w.bodyweight ? w.bodyweight + ' kg' : '—'}</div></div>
             </div>
-            ${w.notes ? `<p class="muted text-sm">📝 ${w.notes}</p>` : ''}
+            ${w.notes ? `<p class="muted text-sm">📝 ${escapeHtml(w.notes)}</p>` : ''}
             ${exHtml}
         </div>`;
 }
