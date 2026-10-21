@@ -212,6 +212,7 @@ async function loadPlanItems(planRow) {
 
 async function loadWeek(weekStart) {
     NUT.weekStart = weekStart;
+    await loadMealLogRange(weekStart, addDays(weekStart, 6));
     const row = NUT.plansByWeek[weekStart];
     NUT.plan = row ? await loadPlanItems(row) : null;
 
@@ -329,8 +330,8 @@ function itemLabel({ food, grams }) {
 // Normalised view of the selected day:
 // { day, editable, total, meals: [{ name, kcal, p, c, f, itemsHtml[], savedName, eaten, empty }] }
 function currentDayView() {
-    const today = isTodaySelected();
-    const eatenNow = slot => today && NUT.mealsReady && !!findTodayLog(slot);
+    const date = dateOfDay(selectedDayIdx);
+    const eatenNow = slot => NUT.mealsReady && !!findLog(date, slot);
 
     if (NUT.plan) {
         const day = NUT.plan.days[selectedDayIdx];
@@ -459,8 +460,7 @@ function renderDay() {
     document.getElementById('day-name').innerHTML =
         escapeHtml(dayLabelFull(selectedDayIdx)) + (today ? ` <span class="badge green">${escapeHtml(t('np.today'))}</span>` : '');
     renderDaySummary(view.total);
-    document.getElementById('eat-hint').textContent =
-        !NUT.mealsReady ? '' : today ? t('np.eatHintToday') : t('np.eatHintOther');
+    document.getElementById('eat-hint').textContent = NUT.mealsReady ? t('np.eatHintToday') : '';
 
     document.getElementById('meals').innerHTML = view.meals.map(meal => {
         if (meal.empty) {
@@ -471,8 +471,8 @@ function renderDay() {
                     <button type="button" class="btn btn-ghost btn-sm" data-act="add" data-meal="${meal.name}">${escapeHtml(t('np.addMeal'))}</button>
                 </div>`;
         }
-        // "Mark as eaten" only for today's meals.
-        const eatBtn = today && NUT.mealsReady
+        // "Mark as eaten" on any day: counts toward that day's Daily Tracker.
+        const eatBtn = NUT.mealsReady
             ? `<button type="button" class="btn btn-sm eat-btn ${meal.eaten ? 'eaten' : ''}" data-act="eat" data-meal="${meal.name}"
                        aria-pressed="${meal.eaten}">${escapeHtml(t(meal.eaten ? 'meals.eaten' : 'meals.markEaten'))}</button>`
             : '';
@@ -618,19 +618,19 @@ async function onPlanMealClick(e) {
     const slot = btn.dataset.meal;
 
     if (btn.dataset.act === 'eat') {
-        if (!isTodaySelected()) return;
+        const date = dateOfDay(selectedDayIdx);
         const meal = planMeal(slot);
         if (meal) {
             const saved = meal.savedMealId && NUT.savedMeals.find(s => s.meal_id === meal.savedMealId);
-            await toggleEatenToday({
-                slot, savedMealId: meal.savedMealId, name: saved ? saved.name : null,
+            await toggleEaten({
+                date, slot, savedMealId: meal.savedMealId, name: saved ? saved.name : null,
                 items: meal.items.map(it => ({ food_id: it.food.food_id, grams: it.grams })),
             });
         } else {
             // Default (built-in) plan: log the meal's listed totals.
             const def = currentDayView().meals.find(m => m.name === slot);
-            await toggleEatenToday({
-                slot, savedMealId: null, name: null, items: [],
+            await toggleEaten({
+                date, slot, savedMealId: null, name: null, items: [],
                 macros: { kcal: def.kcal, p: def.p, c: def.c, f: def.f },
             });
         }
@@ -679,9 +679,15 @@ async function savePlanMeal(slot, items, savedMealId, { dayIdx = selectedDayIdx,
         const { error } = await db.from('meal_plan_items').insert(rows);
         if (error) { showToast(t('common.errorSaving', { msg: error.message }), 'error'); await reloadPlan(); return false; }
     }
+    // Already marked as eaten on that date? Keep the day's calories in step.
+    const date = dateOfDay(dayIdx, planRow ? (planRow.week_start || NUT.weekStart) : NUT.weekStart);
+    let eatenNote = '';
+    try { eatenNote = await syncEatenMeal(date, slot, items, savedMealId); }
+    catch (err) { showToast(t('meals.trackerError', { msg: err.message }), 'error'); }
+
     if (quiet) return true;   // caller reloads once after several days
     await reloadPlan();
-    showToast(items.length ? t('np.mealUpdated') : t('np.mealDeleted'));
+    showToast([items.length ? t('np.mealUpdated') : t('np.mealDeleted'), eatenNote].filter(Boolean).join(' · '));
     return true;
 }
 

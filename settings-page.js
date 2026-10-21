@@ -18,6 +18,16 @@ const NUMERIC = new Set([
 ]);
 const MACRO_IDS = ['s-protein', 's-carbs', 's-fat'];
 
+// Activity level → NEAT multiplier (BMR × this = resting daily burn).
+// Lower than the usual 1.2–1.9 activity factors on purpose: steps and
+// workouts are counted separately, so they must not be included here too.
+const ACTIVITY_NEAT = {
+    'Sedentary (desk job)': 1.2,
+    'Lightly active': 1.3,
+    'Moderately active': 1.4,
+    'Very active': 1.5,
+};
+
 let profile = null;
 let savedSnapshot = '';          // form state as last saved, to know when there are changes
 let savedMode = 'auto';
@@ -48,6 +58,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.addEventListener('input', onFormEdit);
         el.addEventListener('change', onFormEdit);
     }
+    // Picking an activity level fills in its NEAT multiplier (still editable by hand);
+    // typing a multiplier that matches a level selects that level.
+    const activity = document.getElementById('s-activity');
+    const neat = document.getElementById('s-neat');
+    activity.addEventListener('change', () => {
+        neat.value = ACTIVITY_NEAT[activity.value];
+        onFormEdit();
+    });
+    neat.addEventListener('change', () => {
+        const match = Object.keys(ACTIVITY_NEAT).find(k => ACTIVITY_NEAT[k] === Number(neat.value));
+        if (match && match !== activity.value) { activity.value = match; onFormEdit(); }
+    });
+
     document.querySelectorAll('[data-step]').forEach(btn => btn.addEventListener('click', () => {
         const input = document.getElementById('s-kcal');
         input.value = Math.max(800, Number(input.value || 0) + Number(btn.dataset.step));
