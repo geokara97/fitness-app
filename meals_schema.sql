@@ -112,6 +112,26 @@ end $$;
 
 
 -- ------------------------------------------------------------
+-- Extra meals: a plan day (and the meal log) can hold meals besides
+-- Breakfast / Lunch / Snack / Dinner, named by the user ("Pre-workout").
+-- The fixed list is replaced by a length check. Saved meals keep the four types.
+-- ------------------------------------------------------------
+alter table public.meal_plan_items drop constraint if exists meal_plan_items_meal_check;
+alter table public.meal_log        drop constraint if exists meal_log_meal_check;
+do $$
+begin
+    if not exists (select 1 from pg_constraint where conname = 'meal_plan_items_meal_name_check') then
+        alter table public.meal_plan_items
+            add constraint meal_plan_items_meal_name_check check (char_length(btrim(meal)) between 1 and 40);
+    end if;
+    if not exists (select 1 from pg_constraint where conname = 'meal_log_meal_name_check') then
+        alter table public.meal_log
+            add constraint meal_log_meal_name_check check (char_length(btrim(meal)) between 1 and 40);
+    end if;
+end $$;
+
+
+-- ------------------------------------------------------------
 -- Row Level Security (same open policy as the other tables)
 -- ------------------------------------------------------------
 alter table public.saved_meals      enable row level security;

@@ -22,6 +22,7 @@
             <button class="main-tab active" data-tab="plan" role="tab" data-i18n="np.tabPlan">📅 Meal Plan</button>
             <button class="main-tab" data-tab="foods" role="tab" data-i18n="np.tabFoods">🥕 My Foods</button>
             <button class="main-tab" data-tab="meals" role="tab" data-i18n="np.tabMeals">🍽️ My Meals</button>
+            <button class="main-tab" data-tab="shopping" role="tab" data-i18n="np.tabShopping">🛒 Shopping</button>
         </div>
 
         <!-- ===================== Meal plan tab ===================== -->
@@ -113,6 +114,26 @@
             <div id="food-list"></div>
         </section>
 
+        <!-- ===================== Shopping tab ===================== -->
+        <section id="tab-shopping" hidden>
+            <div class="week-nav shop-weeknav">
+                <button type="button" class="btn btn-ghost btn-sm" id="shop-prev" aria-label="Previous week" data-i18n-title="np.prevWeek"><svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true"><path d="M8 2L2 8l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <strong id="shop-week"></strong>
+                <button type="button" class="btn btn-ghost btn-sm" id="shop-next" aria-label="Next week" data-i18n-title="np.nextWeek"><svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true"><path d="M2 2l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+            <div class="main-tabs" id="shop-range" role="tablist">
+                <button type="button" class="main-tab active" data-range="week" role="tab" data-i18n="shop.wholeWeek">Whole week</button>
+                <button type="button" class="main-tab" data-range="rest" role="tab" data-i18n="shop.fromToday">From today</button>
+            </div>
+            <div class="shop-toolbar">
+                <span class="muted text-sm" id="shop-count"></span>
+                <button type="button" class="btn btn-ghost btn-sm" id="shop-clear" hidden data-i18n="shop.untick">Untick all</button>
+                <button type="button" class="btn btn-primary btn-sm" id="shop-share" hidden data-i18n="shop.share">Share list</button>
+            </div>
+            <p class="list-footer shop-note" data-i18n="shop.note">Raw weights for every meal in the plan, rounded up to 10 g. Extra meals you logged are not included.</p>
+            <div id="shop-list"></div>
+        </section>
+
         <!-- ===================== My meals tab ===================== -->
         <section id="tab-meals" hidden>
             <div class="card plan-banner">
@@ -148,6 +169,10 @@
                         <input type="text" id="me-rating" inputmode="decimal" maxlength="4" autocomplete="off"
                                placeholder="1–10, e.g. 7.5" data-i18n-placeholder="meals.ratingPh">
                     </div>
+                </div>
+                <div class="form-group" id="me-extra-fields" hidden>
+                    <label for="me-extra-name" data-i18n="np.extraName">Meal name</label>
+                    <input type="text" id="me-extra-name" maxlength="40" autocomplete="off" placeholder="e.g. Pre-workout" data-i18n-placeholder="np.extraNamePh">
                 </div>
                 <div class="form-group" id="me-plan-fields">
                     <label for="me-from-saved" data-i18n="np.fromSaved">Start from one of my meals</label>
@@ -263,5 +288,6 @@
     <script src="nutrition-page.js"></script>
     <script src="nutrition-foods.js"></script>
     <script src="nutrition-meals.js"></script>
+    <script src="nutrition-shopping.js"></script>
 </body>
 </html>

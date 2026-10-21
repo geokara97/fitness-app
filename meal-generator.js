@@ -207,11 +207,15 @@ function finishDay(dayEntries, targets) {
  * rows:     [{ day_of_week, meal, food_id, grams, sort_order, saved_meal_id }]
  * Saved (favourite) meals keep their recipe and are scaled as a whole (±30%);
  * vegetables keep their grams; every other food is re-solved like a fresh plan.
+ * Extra meals the user logged on a day (not one of the four) are kept exactly
+ * as they are and don't change how the other meals are fitted.
  * Returns rows in the same shape with new grams.
  */
 function refitMealPlan(rows, foodById, targets) {
     const out = [];
+    const basic = new Set(MEAL_TEMPLATES.map(tpl => tpl.meal));
     for (let d = 1; d <= 7; d++) {
+        const extras = rows.filter(r => r.day_of_week === d && !basic.has(r.meal) && foodById[r.food_id]);
         const dayEntries = [];
         MEAL_TEMPLATES.forEach(tpl => {
             const mealRows = rows
@@ -247,6 +251,10 @@ function refitMealPlan(rows, foodById, targets) {
         dayEntries.forEach(e => out.push({
             day_of_week: d, meal: e.meal, food_id: e.food.food_id, grams: e.grams,
             sort_order: e.order, saved_meal_id: e.savedMealId,
+        }));
+        extras.forEach(r => out.push({
+            day_of_week: d, meal: r.meal, food_id: r.food_id, grams: Number(r.grams),
+            sort_order: r.sort_order, saved_meal_id: r.saved_meal_id || null,
         }));
     }
     return out;

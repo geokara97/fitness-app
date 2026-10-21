@@ -287,7 +287,7 @@ async function toggleEatenNow({ date, slot, savedMealId, name, items, macros = n
         const kcal = Math.round(Number(logged[0].kcal) || 0);
         try {
             const total = await adjustCaloriesEaten(date, -kcal);
-            showToast(t('meals.unmarked', { meal: t('meal.' + slot), kcal, day, total }));
+            showToast(t('meals.unmarked', { meal: mealLabel(slot), kcal, day, total }));
         } catch (err) {
             showToast(t('meals.trackerError', { msg: err.message }), 'error');
         }
@@ -300,7 +300,7 @@ async function toggleEatenNow({ date, slot, savedMealId, name, items, macros = n
     NUT.mealLog.unshift(data);
     try {
         const total = await adjustCaloriesEaten(date, row.kcal);
-        showToast(t('meals.marked', { meal: t('meal.' + slot), kcal: row.kcal, day, total }));
+        showToast(t('meals.marked', { meal: mealLabel(slot), kcal: row.kcal, day, total }));
     } catch (err) {
         showToast(t('meals.trackerError', { msg: err.message }), 'error');
     }
@@ -470,12 +470,18 @@ function openMealEditor(opts) {
     const isSaved = opts.mode === 'saved';
     document.getElementById('meal-modal-title').textContent = isSaved
         ? t(opts.mealId ? 'meals.editTitle' : 'meals.newTitle')
-        : t('np.editPlanMealTitle', { meal: t('meal.' + opts.slot), day: dayLabelFull(selectedDayIdx) });
+        : opts.newExtra
+            ? t('np.addExtraTitle', { day: dayLabelFull(selectedDayIdx) })
+            : t('np.editPlanMealTitle', { meal: mealLabel(opts.slot), day: dayLabelFull(selectedDayIdx) });
 
     document.getElementById('me-saved-fields').hidden = !isSaved;
     document.getElementById('me-name').required = isSaved;
     document.getElementById('me-name').value = opts.name || '';
-    document.getElementById('me-slot').value = opts.slot || 'Lunch';
+    // Saved meals keep the four meal types; one saved from an extra meal starts as a snack.
+    document.getElementById('me-slot').value = MEAL_ORDER.includes(opts.slot) ? opts.slot : opts.slot ? 'Snack' : 'Lunch';
+    // A new extra meal needs a name ("Pre-workout", "Second snack").
+    document.getElementById('me-extra-fields').hidden = !opts.newExtra;
+    document.getElementById('me-extra-name').value = '';
     document.getElementById('me-rating').value = opts.rating ? String(opts.rating) : '';
 
     // Plan mode: start from one of your meals (same meal type listed first).
@@ -492,7 +498,9 @@ function openMealEditor(opts) {
     (opts.items && opts.items.length ? opts.items : [{}]).forEach(addEditorRow);
     updateEditorTotals();
     document.getElementById('meal-modal').classList.add('show');
-    (isSaved ? document.getElementById('me-name') : document.querySelector('.me-food')).focus();
+    (isSaved ? document.getElementById('me-name')
+        : opts.newExtra ? document.getElementById('me-extra-name')
+        : document.querySelector('.me-food')).focus();
 }
 
 function closeMealEditor() {
@@ -519,10 +527,29 @@ async function saveMealEditor(e) {
     btn.disabled = true;
     try {
         if (mealEditor.mode === 'plan') {
+            let slot = mealEditor.slot;
+            if (mealEditor.newExtra) {
+                slot = document.getElementById('me-extra-name').value.trim().replace(/\s+/g, ' ');
+                if (!slot) { showToast(t('np.extraNameNeeded'), 'error'); document.getElementById('me-extra-name').focus(); return; }
+                // One meal per name per day; the basic names (in either language) are taken too.
+                const day = planDay();
+                const taken = [...MEAL_ORDER.flatMap(m => [m, t('meal.' + m)]), ...(day ? day.meals.map(m => m.name) : [])]
+                    .some(n => n.toLocaleLowerCase(LOCALE) === slot.toLocaleLowerCase(LOCALE));
+                if (taken) { showToast(t('np.extraNameTaken', { name: slot }), 'error'); return; }
+            }
             // Still the saved meal only if its set of foods is unchanged (grams may differ).
             const saved = mealEditor.savedMealId && NUT.savedMeals.find(s => s.meal_id === mealEditor.savedMealId);
             const sameFoods = saved && mealSignature(null, saved.items.map(i => i.food_id)) === mealSignature(null, items.map(i => i.food_id));
-            if (await savePlanMeal(mealEditor.slot, items, sameFoods ? saved.meal_id : null)) closeMealEditor();
+            const savedMealId = sameFoods ? saved.meal_id : null;
+            const isNewExtra = mealEditor.newExtra;
+            if (!(await savePlanMeal(slot, items, savedMealId))) return;
+            closeMealEditor();
+            // An extra meal logs something you ate: count it on that day straight away.
+            if (isNewExtra && NUT.mealsReady) {
+                await toggleEaten({ date: dateOfDay(selectedDayIdx), slot, savedMealId,
+                                    name: saved && sameFoods ? saved.name : null, items });
+                renderDay();
+            }
             return;
         }
 

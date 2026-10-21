@@ -8,6 +8,12 @@
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const MEAL_ORDER = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
+
+// The four basic meals are translated; extra meals show the name the user gave them.
+function mealLabel(slot) {
+    return MEAL_ORDER.includes(slot) ? t('meal.' + slot) : slot;
+}
+function isExtraMeal(slot) { return !MEAL_ORDER.includes(slot); }
 const WEEKS_BACK = 12;    // how far the week arrows go
 const WEEKS_AHEAD = 8;
 
@@ -56,20 +62,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ---- Tabs ---------------------------------------------------
-const MAIN_TABS = ['plan', 'foods', 'meals'];
+const MAIN_TABS = ['plan', 'foods', 'meals', 'shopping'];
 
 function initMainTabs() {
     let current = null;
     const show = (tab) => {
-        document.querySelectorAll('.main-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+        document.querySelectorAll('.main-tab[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
         MAIN_TABS.forEach(name => { document.getElementById('tab-' + name).hidden = tab !== name; });
         history.replaceState(null, '', tab === 'plan' ? location.pathname : '#' + tab);
         if (current && current !== tab && typeof springIn === 'function') {
             springIn(document.getElementById('tab-' + tab), Math.sign(MAIN_TABS.indexOf(tab) - MAIN_TABS.indexOf(current)));
         }
         current = tab;
+        if (tab === 'shopping' && typeof renderShoppingList === 'function') renderShoppingList();
     };
-    document.querySelectorAll('.main-tab').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+    document.querySelectorAll('.main-tab[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
     const fromHash = location.hash.slice(1);
     show(MAIN_TABS.includes(fromHash) ? fromHash : 'plan');
     if (typeof attachTabIndicator === 'function') attachTabIndicator(document.querySelector('.main-tabs'), '.main-tab');
@@ -195,10 +202,14 @@ async function loadPlanItems(planRow) {
         .order('day_of_week').order('sort_order');
     if (error) throw error;
 
-    const days = DAY_NAMES.map((day, i) => ({
+    const days = DAY_NAMES.map((day, i) => {
+        const dayRows = (data || []).filter(it => it.day_of_week === i + 1 && NUT.foodsById[it.food_id]);
+        const extras = [...new Set([...dayRows].sort((a, b) => (a.item_id || 0) - (b.item_id || 0))
+            .map(it => it.meal).filter(isExtraMeal))];
+        return {
         day,
-        meals: MEAL_ORDER.map(name => {
-            const rows = (data || []).filter(it => it.day_of_week === i + 1 && it.meal === name && NUT.foodsById[it.food_id]);
+        meals: [...MEAL_ORDER, ...extras].map(name => {
+            const rows = dayRows.filter(it => it.meal === name);
             return {
                 name,
                 savedMealId: rows.length && rows.every(r => r.saved_meal_id && r.saved_meal_id === rows[0].saved_meal_id)
@@ -206,7 +217,8 @@ async function loadPlanItems(planRow) {
                 items: rows.map(it => ({ food: NUT.foodsById[it.food_id], grams: Number(it.grams) })),
             };
         }).filter(m => m.items.length),
-    }));
+        };
+    });
     return { meta: planRow, days, rows: data || [] };
 }
 
@@ -335,8 +347,10 @@ function currentDayView() {
 
     if (NUT.plan) {
         const day = NUT.plan.days[selectedDayIdx];
-        // Every slot is listed; a deleted meal shows as an empty placeholder.
-        const meals = MEAL_ORDER.map(slot => {
+        // Every basic slot is listed (a deleted one shows as an empty placeholder),
+        // then the extra meals added to this day.
+        const extraSlots = day.meals.map(m => m.name).filter(isExtraMeal);
+        const meals = [...MEAL_ORDER, ...extraSlots].map(slot => {
             const m = day.meals.find(x => x.name === slot);
             if (!m) return { name: slot, empty: true };
             const mm = macrosOf(m.items);
@@ -406,6 +420,7 @@ function renderPlan() {
     renderDayTabs();
     renderDay();
     renderRotation();
+    if (typeof renderShoppingList === 'function') renderShoppingList();   // same week as the plan
 }
 
 // Daily targets; the day summary card shows the selected day against them.
@@ -467,20 +482,20 @@ function renderDay() {
             return `
                 <div class="card meal-card meal-empty">
                     <span class="meal-icon" aria-hidden="true">${MEAL_ICONS[meal.name] || '🍽️'}</span>
-                    <span class="meal-title"><strong>${t('meal.' + meal.name)}</strong><span class="meal-sub">${escapeHtml(t('np.mealRemoved'))}</span></span>
-                    <button type="button" class="btn btn-ghost btn-sm" data-act="add" data-meal="${meal.name}">${escapeHtml(t('np.addMeal'))}</button>
+                    <span class="meal-title"><strong>${escapeHtml(mealLabel(meal.name))}</strong><span class="meal-sub">${escapeHtml(t('np.mealRemoved'))}</span></span>
+                    <button type="button" class="btn btn-ghost btn-sm" data-act="add" data-meal="${escapeHtml(meal.name)}">${escapeHtml(t('np.addMeal'))}</button>
                 </div>`;
         }
         // "Mark as eaten" on any day: counts toward that day's Daily Tracker.
         const eatBtn = NUT.mealsReady
-            ? `<button type="button" class="btn btn-sm eat-btn ${meal.eaten ? 'eaten' : ''}" data-act="eat" data-meal="${meal.name}"
+            ? `<button type="button" class="btn btn-sm eat-btn ${meal.eaten ? 'eaten' : ''}" data-act="eat" data-meal="${escapeHtml(meal.name)}"
                        aria-pressed="${meal.eaten}">${escapeHtml(t(meal.eaten ? 'meals.eaten' : 'meals.markEaten'))}</button>`
             : '';
         const editBtns = view.editable ? `
                 <span class="meal-icon-actions">
-                    <button type="button" class="pref-btn active" data-act="edit" data-meal="${meal.name}" title="${escapeHtml(t('np.editMeal'))}">✏️</button>
-                    ${NUT.mealsReady ? `<button type="button" class="pref-btn active" data-act="save" data-meal="${meal.name}" title="${escapeHtml(t('np.saveAsMine'))}">⭐</button>` : ''}
-                    <button type="button" class="icon-btn" data-act="delete" data-meal="${meal.name}" title="${escapeHtml(t('np.deleteMeal'))}">🗑</button>
+                    <button type="button" class="pref-btn active" data-act="edit" data-meal="${escapeHtml(meal.name)}" title="${escapeHtml(t('np.editMeal'))}">✏️</button>
+                    ${NUT.mealsReady ? `<button type="button" class="pref-btn active" data-act="save" data-meal="${escapeHtml(meal.name)}" title="${escapeHtml(t('np.saveAsMine'))}">⭐</button>` : ''}
+                    <button type="button" class="icon-btn" data-act="delete" data-meal="${escapeHtml(meal.name)}" title="${escapeHtml(t('np.deleteMeal'))}">🗑</button>
                 </span>` : '';
         const actions = eatBtn || editBtns ? `<div class="meal-actions">${eatBtn}${editBtns}</div>` : '';
         return `
@@ -488,7 +503,7 @@ function renderDay() {
                 <div class="meal-head">
                     <span class="meal-icon" aria-hidden="true">${MEAL_ICONS[meal.name] || '🍽️'}</span>
                     <span class="meal-title">
-                        <h4>${t('meal.' + meal.name)}${meal.eaten ? ' <span class="eaten-check" aria-hidden="true">✓</span>' : ''}</h4>
+                        <h4>${escapeHtml(mealLabel(meal.name))}${meal.eaten ? ' <span class="eaten-check" aria-hidden="true">✓</span>' : ''}</h4>
                         ${meal.savedName ? `<span class="meal-sub saved-tag">⭐ ${escapeHtml(meal.savedName)}</span>` : ''}
                     </span>
                     <span class="meal-kcal"><strong>${meal.kcal}</strong> kcal</span>
@@ -501,7 +516,11 @@ function renderDay() {
                 <ul class="meal-items">${meal.itemsHtml.map(it => `<li>${it}</li>`).join('')}</ul>
                 ${actions}
             </div>`;
-    }).join('');
+    }).join('') + (view.editable ? `
+            <button type="button" class="card meal-add" data-act="add-extra">
+                <span class="meal-icon" aria-hidden="true">＋</span>
+                <span class="meal-title"><strong>${escapeHtml(t('np.addExtra'))}</strong><span class="meal-sub">${escapeHtml(t('np.addExtraSub'))}</span></span>
+            </button>` : '');
 }
 
 // Liked foods when the user has marked any; otherwise the default rotation list.
@@ -561,6 +580,14 @@ async function generatePlan() {
             showToast(t('np.genMissing', { groups: blocking.map(g => t('cat.' + g)).join(', ') || t('cat.protein') }), 'error');
             return;
         }
+
+        // Extra meals you logged this week stay on their days, unchanged.
+        const extraRows = (NUT.weekStart === week && NUT.plan ? NUT.plan.rows : []).filter(r => isExtraMeal(r.meal));
+        extraRows.forEach(r => {
+            const row = { day_of_week: r.day_of_week, meal: r.meal, food_id: r.food_id, grams: Number(r.grams), sort_order: r.sort_order };
+            if (NUT.mealsReady) row.saved_meal_id = r.saved_meal_id || null;
+            items.push(row);
+        });
 
         // One plan per week: reuse this week's row (fresh targets), replace its meals.
         const existing = NUT.plansByWeek[week];
@@ -648,12 +675,15 @@ async function onPlanMealClick(e) {
         case 'add':
             openMealEditor({ mode: 'plan', slot, savedMealId: null, items: [] });
             break;
+        case 'add-extra':
+            openMealEditor({ mode: 'plan', slot: null, newExtra: true, savedMealId: null, items: [] });
+            break;
         case 'save':
             openMealEditor({ mode: 'saved', slot, linkPlanSlot: slot,
                              items: meal.items.map(it => ({ food_id: it.food.food_id, grams: it.grams })) });
             break;
         case 'delete': {
-            const ok = await confirmToast(t('np.confirmDeleteMeal', { meal: t('meal.' + slot), day: dayLabelFull(selectedDayIdx) }),
+            const ok = await confirmToast(t('np.confirmDeleteMeal', { meal: mealLabel(slot), day: dayLabelFull(selectedDayIdx) }),
                                           { okText: t('common.delete') });
             if (ok) await savePlanMeal(slot, [], null);
             break;
@@ -677,7 +707,11 @@ async function savePlanMeal(slot, items, savedMealId, { dayIdx = selectedDayIdx,
             ...(NUT.mealsReady ? { saved_meal_id: savedMealId || null } : {}),
         }));
         const { error } = await db.from('meal_plan_items').insert(rows);
-        if (error) { showToast(t('common.errorSaving', { msg: error.message }), 'error'); await reloadPlan(); return false; }
+        if (error) {
+            showToast(error.code === '23514' && isExtraMeal(slot) ? t('np.extraDbMissing') : t('common.errorSaving', { msg: error.message }), 'error');
+            await reloadPlan();
+            return false;
+        }
     }
     // Already marked as eaten on that date? Keep the day's calories in step.
     const date = dateOfDay(dayIdx, planRow ? (planRow.week_start || NUT.weekStart) : NUT.weekStart);
