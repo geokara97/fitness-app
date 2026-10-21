@@ -9,6 +9,11 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const { createClient } = window.supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ---- USDA FoodData Central (food macro lookup) ---------------
+// 'DEMO_KEY' works but is limited to ~30 searches/hour. Get a free
+// personal key at https://fdc.nal.usda.gov/api-key-signup and paste it here.
+const USDA_API_KEY = 'DEMO_KEY';
+
 // 7,700 kcal is roughly the energy in 1 kg of body fat.
 const KCAL_PER_KG_FAT = 7700;
 
@@ -102,6 +107,12 @@ function round(n, dp = 0) {
     if (n === null || n === undefined || isNaN(n)) return 0;
     const f = Math.pow(10, dp);
     return Math.round(n * f) / f;
+}
+
+// Escape text before putting it into innerHTML (food names come from users & APIs).
+function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function dayName(dateString) {

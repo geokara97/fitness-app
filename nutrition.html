@@ -15,50 +15,160 @@
             <p class="muted" id="np-subtitle">1800 kcal — Fat Loss & Muscle Retention</p>
         </div>
 
-        <!-- Targets -->
-        <div class="grid cols-4">
-            <div class="stat accent"><div class="label" data-i18n="np.dailyTarget">Daily target</div><div class="value" id="np-kcal">1800</div><div class="sub">kcal</div></div>
-            <div class="stat"><div class="label" data-i18n="np.protein">Protein</div><div class="value" id="np-p">170 g</div></div>
-            <div class="stat"><div class="label" data-i18n="np.carbs">Carbs</div><div class="value" id="np-c">145 g</div></div>
-            <div class="stat"><div class="label" data-i18n="np.fat">Fat</div><div class="value" id="np-f">55 g</div></div>
-        </div>
-        <div class="card" style="margin-top:16px">
-            <ul class="meal-items" id="np-notes"></ul>
+        <div class="main-tabs" role="tablist">
+            <button class="main-tab active" data-tab="plan" role="tab" data-i18n="np.tabPlan">📅 Meal Plan</button>
+            <button class="main-tab" data-tab="foods" role="tab" data-i18n="np.tabFoods">🥕 My Foods</button>
         </div>
 
-        <!-- Day selector -->
-        <div class="section-title" data-i18n="np.dailyMeals">🍽️ Daily Meals</div>
-        <div class="day-tabs" id="day-tabs"></div>
-
-        <div class="flex-between" style="margin-bottom:12px">
-            <div>
-                <strong id="day-name" style="font-size:1.2rem"></strong>
-                <span class="muted text-sm" id="day-total"></span>
+        <!-- ===================== Meal plan tab ===================== -->
+        <section id="tab-plan">
+            <div class="card plan-banner" id="plan-banner">
+                <p id="plan-banner-text" class="text-sm"></p>
+                <button class="btn btn-primary btn-sm" id="btn-generate" data-i18n="np.generate">✨ Generate my plan</button>
             </div>
-            <button class="btn btn-success btn-sm" id="log-day-btn" data-i18n="np.logBtnDefault">✓ Log this day's calories to today</button>
-        </div>
-        <div id="meals"></div>
 
-        <!-- Food rotation -->
-        <div class="section-title" data-i18n="np.rotate">🔄 Foods You Can Rotate Freely</div>
-        <div class="card">
-            <div class="food-cols">
-                <div><strong data-i18n="np.rotProtein">🥩 Protein</strong><ul id="rot-protein"></ul></div>
-                <div><strong data-i18n="np.rotCarbs">🍚 Carbs</strong><ul id="rot-carbs"></ul></div>
-                <div><strong data-i18n="np.rotFats">🥑 Healthy Fats</strong><ul id="rot-fats"></ul></div>
+            <!-- Targets -->
+            <div class="grid cols-4" style="margin-top:16px">
+                <div class="stat accent"><div class="label" data-i18n="np.dailyTarget">Daily target</div><div class="value" id="np-kcal">1800</div><div class="sub">kcal</div></div>
+                <div class="stat"><div class="label" data-i18n="np.protein">Protein</div><div class="value" id="np-p">170 g</div></div>
+                <div class="stat"><div class="label" data-i18n="np.carbs">Carbs</div><div class="value" id="np-c">145 g</div></div>
+                <div class="stat"><div class="label" data-i18n="np.fat">Fat</div><div class="value" id="np-f">55 g</div></div>
             </div>
-        </div>
+            <div class="card" style="margin-top:16px">
+                <ul class="meal-items" id="np-notes"></ul>
+            </div>
 
-        <!-- Oil swaps -->
-        <div class="section-title" data-i18n="np.oil">🫒 Olive Oil Swaps</div>
-        <div class="card">
-            <p class="muted text-sm" data-i18n="np.oilDesc">Add more olive oil without changing calories — use these 1-for-1 swaps:</p>
-            <table style="margin-top:8px"><tbody id="oil-swaps"></tbody></table>
-        </div>
+            <!-- Day selector -->
+            <div class="section-title" data-i18n="np.dailyMeals">🍽️ Daily Meals</div>
+            <div class="day-tabs" id="day-tabs"></div>
 
-        <!-- Tips -->
-        <div class="section-title" data-i18n="np.tips">💡 Tips & Guidelines</div>
-        <div class="card"><ul class="meal-items" id="np-tips"></ul></div>
+            <div class="flex-between" style="margin-bottom:12px">
+                <div>
+                    <strong id="day-name" style="font-size:1.2rem"></strong>
+                    <span class="muted text-sm" id="day-total"></span>
+                </div>
+                <button class="btn btn-success btn-sm" id="log-day-btn" data-i18n="np.logBtnDefault">✓ Log this day's calories to today</button>
+            </div>
+            <div id="meals"></div>
+
+            <!-- Food rotation -->
+            <div class="section-title" id="rot-title" data-i18n="np.rotate">🔄 Foods You Can Rotate Freely</div>
+            <div class="card">
+                <div class="food-cols">
+                    <div><strong data-i18n="np.rotProtein">🥩 Protein</strong><ul id="rot-protein"></ul></div>
+                    <div><strong data-i18n="np.rotCarbs">🍚 Carbs</strong><ul id="rot-carbs"></ul></div>
+                    <div><strong data-i18n="np.rotFats">🥑 Healthy Fats</strong><ul id="rot-fats"></ul></div>
+                </div>
+            </div>
+
+            <!-- Oil swaps -->
+            <div class="section-title" data-i18n="np.oil">🫒 Olive Oil Swaps</div>
+            <div class="card">
+                <p class="muted text-sm" data-i18n="np.oilDesc">Add more olive oil without changing calories — use these 1-for-1 swaps:</p>
+                <table style="margin-top:8px"><tbody id="oil-swaps"></tbody></table>
+            </div>
+
+            <!-- Tips -->
+            <div class="section-title" data-i18n="np.tips">💡 Tips & Guidelines</div>
+            <div class="card"><ul class="meal-items" id="np-tips"></ul></div>
+        </section>
+
+        <!-- ===================== My foods tab ===================== -->
+        <section id="tab-foods" hidden>
+            <div class="card">
+                <p class="text-sm" data-i18n="foods.help">Mark the foods you like, dislike or are allergic to. Generated plans use your liked foods; if a food group has no likes, unmarked foods fill in. Disliked and allergy foods are never used.</p>
+                <div class="pref-summary" id="pref-summary"></div>
+                <div class="foods-toolbar">
+                    <input type="search" id="food-search" placeholder="Search foods…" data-i18n-placeholder="foods.searchPh">
+                    <select id="food-filter-cat">
+                        <option value="" data-i18n="foods.allCategories">All groups</option>
+                        <option value="protein" data-i18n="cat.protein">Protein</option>
+                        <option value="carbs" data-i18n="cat.carbs">Carbs</option>
+                        <option value="fats" data-i18n="cat.fats">Fats</option>
+                        <option value="vegetables" data-i18n="cat.vegetables">Vegetables</option>
+                        <option value="fruit" data-i18n="cat.fruit">Fruit</option>
+                    </select>
+                    <select id="food-filter-pref">
+                        <option value="" data-i18n="foods.allPrefs">All foods</option>
+                        <option value="like" data-i18n="foods.onlyLiked">👍 Liked</option>
+                        <option value="dislike" data-i18n="foods.onlyDisliked">👎 Disliked</option>
+                        <option value="allergy" data-i18n="foods.onlyAllergy">⚠️ Allergy</option>
+                        <option value="none" data-i18n="foods.onlyUnmarked">Not marked</option>
+                    </select>
+                    <button class="btn btn-primary" id="btn-add-food" data-i18n="foods.add">+ Add food</button>
+                </div>
+            </div>
+            <div id="food-list"></div>
+        </section>
+    </div>
+
+    <!-- ===================== Add food modal ===================== -->
+    <div class="modal" id="food-modal" role="dialog" aria-modal="true" aria-labelledby="food-modal-title">
+        <div class="modal-box modal-wide">
+            <span class="modal-close" id="food-modal-close" aria-label="Close">×</span>
+            <h3 id="food-modal-title" data-i18n="foods.addTitle">Add a food</h3>
+
+            <div class="form-group">
+                <label for="lookup-q" data-i18n="foods.lookupLabel">Look up macros online</label>
+                <div class="lookup-row">
+                    <select id="lookup-source">
+                        <option value="usda" data-i18n="foods.srcUsda">USDA — raw & generic foods</option>
+                        <option value="off" data-i18n="foods.srcOff">Open Food Facts — products & barcodes</option>
+                    </select>
+                    <input type="search" id="lookup-q" placeholder="e.g. chicken breast raw" data-i18n-placeholder="foods.lookupPh">
+                    <button type="button" class="btn btn-ghost" id="btn-lookup" data-i18n="foods.lookupBtn">Search</button>
+                </div>
+                <div class="hint" data-i18n="foods.lookupHint">Pick a result to fill in the form below — you can still edit every value.</div>
+                <div id="lookup-results" class="lookup-results"></div>
+            </div>
+
+            <hr>
+
+            <form id="food-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ff-name-en" data-i18n="foods.nameEn">Name (English)</label>
+                        <input type="text" id="ff-name-en" required maxlength="120">
+                    </div>
+                    <div class="form-group">
+                        <label for="ff-name-el" data-i18n="foods.nameEl">Name (Greek)</label>
+                        <input type="text" id="ff-name-el" maxlength="120">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ff-category" data-i18n="foods.category">Food group</label>
+                    <select id="ff-category" required>
+                        <option value="protein" data-i18n="cat.protein">Protein</option>
+                        <option value="carbs" data-i18n="cat.carbs">Carbs</option>
+                        <option value="fats" data-i18n="cat.fats">Fats</option>
+                        <option value="vegetables" data-i18n="cat.vegetables">Vegetables</option>
+                        <option value="fruit" data-i18n="cat.fruit">Fruit</option>
+                    </select>
+                </div>
+                <div class="hint" style="margin:-8px 0 10px" data-i18n="foods.per100">Values per 100 g (raw weight).</div>
+                <div class="form-row">
+                    <div class="form-group"><label for="ff-kcal">kcal</label><input type="number" id="ff-kcal" min="0" max="900" step="0.1" required></div>
+                    <div class="form-group"><label for="ff-protein" data-i18n="foods.proteinG">Protein (g)</label><input type="number" id="ff-protein" min="0" max="100" step="0.1" required></div>
+                    <div class="form-group"><label for="ff-carbs" data-i18n="foods.carbsG">Carbs (g)</label><input type="number" id="ff-carbs" min="0" max="100" step="0.1" required></div>
+                    <div class="form-group"><label for="ff-fat" data-i18n="foods.fatG">Fat (g)</label><input type="number" id="ff-fat" min="0" max="100" step="0.1" required></div>
+                </div>
+                <div class="form-group">
+                    <label for="ff-piece" data-i18n="foods.piece">Weight of 1 piece (g) — optional</label>
+                    <input type="number" id="ff-piece" min="1" step="1" placeholder="e.g. 50 for one egg" data-i18n-placeholder="foods.piecePh">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="foods.slots">Suitable for</label>
+                    <div class="slot-checks">
+                        <label><input type="checkbox" name="ff-slot" value="breakfast" checked> <span data-i18n="meal.Breakfast">Breakfast</span></label>
+                        <label><input type="checkbox" name="ff-slot" value="lunch" checked> <span data-i18n="meal.Lunch">Lunch</span></label>
+                        <label><input type="checkbox" name="ff-slot" value="snack" checked> <span data-i18n="meal.Snack">Snack</span></label>
+                        <label><input type="checkbox" name="ff-slot" value="dinner" checked> <span data-i18n="meal.Dinner">Dinner</span></label>
+                    </div>
+                </div>
+                <p class="hint" id="ff-source-note"></p>
+                <button type="submit" class="btn btn-primary btn-block" id="ff-save" data-i18n="foods.save">Save food</button>
+            </form>
+        </div>
     </div>
 
     <div id="toast" class="toast"></div>
@@ -66,6 +176,8 @@
     <script src="i18n.js"></script>
     <script src="config.js"></script>
     <script src="nutrition-data.js"></script>
+    <script src="meal-generator.js"></script>
     <script src="nutrition-page.js"></script>
+    <script src="nutrition-foods.js"></script>
 </body>
 </html>

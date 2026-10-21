@@ -370,6 +370,97 @@ td.num, th.num { text-align: right; }
 .food-cols ul { list-style: none; }
 .food-cols li { padding: 2px 0; font-size: .9rem; }
 
+/* ---- Nutrition: tabs, plan banner, my foods ---------------- */
+.main-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 20px;
+}
+.main-tab {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    padding: 10px 16px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--text-soft);
+    cursor: pointer;
+}
+.main-tab:hover { color: var(--text); }
+.main-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.plan-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+.plan-banner p { flex: 1; min-width: 220px; }
+
+.pref-summary { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.foods-toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+.foods-toolbar input { flex: 2; min-width: 180px; }
+.foods-toolbar select { flex: 1; min-width: 140px; width: auto; }
+
+.food-group { padding: 6px 16px; }
+.food-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.food-row:last-child { border-bottom: none; }
+.food-info { min-width: 0; }
+.food-info strong { margin-right: 6px; }
+.per100 { opacity: .7; }
+.pref-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.pref-btn {
+    width: 38px; height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    filter: grayscale(1);
+    opacity: .55;
+    transition: opacity .15s, filter .15s, background .15s, border-color .15s;
+}
+.pref-btn:hover { opacity: .9; filter: none; }
+.pref-btn.active { opacity: 1; filter: none; }
+.pref-btn.like.active    { background: #dcfce7; border-color: var(--success); }
+.pref-btn.dislike.active { background: #e2e8f0; border-color: #64748b; }
+.pref-btn.allergy.active { background: #fee2e2; border-color: var(--danger); }
+@media (max-width: 520px) {
+    .food-row { flex-direction: column; align-items: flex-start; }
+}
+
+.modal-box.modal-wide { max-width: 640px; }
+.lookup-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.lookup-row select { flex: 1 1 200px; width: auto; }
+.lookup-row input { flex: 2 1 200px; }
+.lookup-results { margin-top: 10px; max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.lookup-item {
+    text-align: left;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 8px 12px;
+    font: inherit;
+    cursor: pointer;
+}
+.lookup-item:hover { border-color: var(--primary); }
+.lookup-item.selected { border-color: var(--primary); background: #eef2ff; }
+.slot-checks { display: flex; gap: 16px; flex-wrap: wrap; }
+.slot-checks label { display: flex; align-items: center; gap: 6px; font-weight: 500; margin: 0; }
+.slot-checks input { width: auto; }
+
 /* ---- Misc -------------------------------------------------- */
 .empty {
     text-align: center;
