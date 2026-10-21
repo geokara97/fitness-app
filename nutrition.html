@@ -18,6 +18,7 @@
         <div class="main-tabs" role="tablist">
             <button class="main-tab active" data-tab="plan" role="tab" data-i18n="np.tabPlan">📅 Meal Plan</button>
             <button class="main-tab" data-tab="foods" role="tab" data-i18n="np.tabFoods">🥕 My Foods</button>
+            <button class="main-tab" data-tab="meals" role="tab" data-i18n="np.tabMeals">🍽️ My Meals</button>
         </div>
 
         <!-- ===================== Meal plan tab ===================== -->
@@ -100,6 +101,52 @@
             </div>
             <div id="food-list"></div>
         </section>
+
+        <!-- ===================== My meals tab ===================== -->
+        <section id="tab-meals" hidden>
+            <div class="card plan-banner">
+                <p class="text-sm" data-i18n="meals.help">Save meals you like to eat. Tap "I ate this today" whenever you eat a meal — meals you eat at least twice in 4 weeks are added to your next generated plan.</p>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-new-meal" data-i18n="meals.new">+ New meal</button>
+            </div>
+            <div id="saved-meals-list"></div>
+        </section>
+    </div>
+
+    <!-- ===================== Meal editor modal ===================== -->
+    <div class="modal" id="meal-modal" role="dialog" aria-modal="true" aria-labelledby="meal-modal-title">
+        <div class="modal-box modal-wide">
+            <span class="modal-close" id="meal-modal-close" aria-label="Close">×</span>
+            <h3 id="meal-modal-title"></h3>
+            <form id="meal-form">
+                <div class="form-row" id="me-saved-fields">
+                    <div class="form-group">
+                        <label for="me-name" data-i18n="meals.name">Meal name</label>
+                        <input type="text" id="me-name" maxlength="80" placeholder="e.g. Chicken rice bowl" data-i18n-placeholder="meals.namePh">
+                    </div>
+                    <div class="form-group">
+                        <label for="me-slot" data-i18n="meals.slot">Meal</label>
+                        <select id="me-slot">
+                            <option value="Breakfast" data-i18n="meal.Breakfast">Breakfast</option>
+                            <option value="Lunch" data-i18n="meal.Lunch">Lunch</option>
+                            <option value="Snack" data-i18n="meal.Snack">Snack</option>
+                            <option value="Dinner" data-i18n="meal.Dinner">Dinner</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" id="me-plan-fields">
+                    <label for="me-from-saved" data-i18n="np.fromSaved">Start from one of my meals</label>
+                    <select id="me-from-saved"></select>
+                </div>
+                <label class="me-items-label" data-i18n="meals.foods">Foods (raw weight)</label>
+                <div id="me-items"></div>
+                <button type="button" class="btn btn-ghost btn-sm" id="me-add-item" data-i18n="meals.addFood">+ Add food</button>
+                <div class="me-totals-row">
+                    <strong data-i18n="meals.total">Total</strong>
+                    <div class="macro-pills" id="me-totals"></div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="me-save" data-i18n="meals.save">Save meal</button>
+            </form>
+        </div>
     </div>
 
     <!-- ===================== Add food modal ===================== -->
@@ -180,5 +227,6 @@
     <script src="meal-generator.js"></script>
     <script src="nutrition-page.js"></script>
     <script src="nutrition-foods.js"></script>
+    <script src="nutrition-meals.js"></script>
 </body>
 </html>

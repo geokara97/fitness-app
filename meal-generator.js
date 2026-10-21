@@ -129,27 +129,87 @@ function pick(pool, dayIdx, offset, avoid) {
     return pool[(dayIdx + offset) % pool.length];
 }
 
+// ---- Favourite meals -----------------------------------------
+// Days per week for a favourite eaten `count` times in the last 4 weeks:
+// 2–5× → 1 day, 6–9× → 2 days, 10+× → 3 days.
+const FAVOURITE_WEEKS = 4;
+const MAX_FAVOURITE_DAYS_PER_SLOT = 4;   // keep at least 3 days of variety per meal slot
+
+function favouriteDays(count) {
+    return Math.max(1, Math.min(3, Math.round(count / FAVOURITE_WEEKS)));
+}
+
+// Spread favourites over the week: { 'day|Meal': favourite }.
+function scheduleFavourites(favourites, rng) {
+    const schedule = {};
+    const perSlot = {};
+    [...favourites].sort((a, b) => b.count - a.count).forEach(fav => {
+        const want = favouriteDays(fav.count);
+        const start = Math.floor(rng() * 7);
+        const step = 7 / want;
+        for (let k = 0; k < want; k++) {
+            if ((perSlot[fav.meal] || 0) >= MAX_FAVOURITE_DAYS_PER_SLOT) break;
+            // Preferred evenly-spaced day, else the next free one.
+            for (let n = 0; n < 7; n++) {
+                const d = (Math.round(start + k * step) + n) % 7;
+                const key = `${d}|${fav.meal}`;
+                if (schedule[key]) continue;
+                schedule[key] = fav;
+                perSlot[fav.meal] = (perSlot[fav.meal] || 0) + 1;
+                break;
+            }
+        }
+    });
+    return schedule;
+}
+
 /**
- * foods:   rows from `foods`
- * prefs:   { [food_id]: 'like' | 'dislike' | 'allergy' }
- * targets: { kcal, protein, carbs, fat }  (daily)
- * Returns { items: [{ day_of_week, meal, food_id, grams, sort_order }], fallbacks, missing }
+ * foods:      rows from `foods`
+ * prefs:      { [food_id]: 'like' | 'dislike' | 'allergy' }
+ * targets:    { kcal, protein, carbs, fat }  (daily)
+ * favourites: [{ meal, count, savedMealId, items: [{ food_id, grams }] }] — meals the user
+ *             ate often; placed first, portions scaled to the meal's calorie share.
+ * Returns { items: [{ day_of_week, meal, food_id, grams, sort_order, saved_meal_id }],
+ *           fallbacks, missing, favouritesPlaced }
  */
-function generateMealPlan(foods, prefs, targets, rng = Math.random) {
+function generateMealPlan(foods, prefs, targets, rng = Math.random, favourites = []) {
     const { pools: rawPools, fallbacks } = buildPools(foods, prefs);
     const pools = {};
     for (const [k, v] of Object.entries(rawPools)) pools[k] = shuffle(v, rng);
 
+    // Only favourites whose foods all still exist and are allowed.
+    const foodById = Object.fromEntries(foods.map(f => [f.food_id, f]));
+    const usableFavourites = favourites.filter(fav => fav.items.length && fav.items.every(it =>
+        foodById[it.food_id] && prefs[it.food_id] !== 'dislike' && prefs[it.food_id] !== 'allergy'));
+    const schedule = scheduleFavourites(usableFavourites, rng);
+
     const missing = new Set();
     const items = [];
+    let favouritesPlaced = 0;
 
     for (let d = 0; d < 7; d++) {
-        const dayEntries = [];          // { food, grams, role, meal, sort }
+        const dayEntries = [];          // { food, grams, role, meal, savedMealId }
         const usedToday = new Set();
 
         MEAL_TEMPLATES.forEach((tpl, mi) => {
             const target = [targets.protein * tpl.share, targets.carbs * tpl.share, targets.fat * tpl.share];
             const mealEntries = [];
+
+            // A favourite meal takes this slot: keep its foods, scale portions
+            // (within ±30%) toward this meal's calorie share.
+            const fav = schedule[`${d}|${tpl.meal}`];
+            if (fav) {
+                const favEntries = fav.items.map((it, i) => ({
+                    food: foodById[it.food_id], grams: Number(it.grams), role: 'fixed', order: i,
+                    meal: tpl.meal, savedMealId: fav.savedMealId || null,
+                }));
+                const kcal = sumMacros(favEntries).kcal;
+                const factor = kcal > 0 ? Math.min(1.3, Math.max(0.7, (targets.kcal * tpl.share) / kcal)) : 1;
+                favEntries.forEach(e => { e.grams *= factor; usedToday.add(e.food.food_id); });
+                dayEntries.push(...favEntries);
+                favouritesPlaced++;
+                return;
+            }
 
             // Fixed vegetables (2 kinds when available).
             const fixed = [0, 0, 0];
@@ -218,22 +278,63 @@ function generateMealPlan(foods, prefs, targets, rng = Math.random) {
         // Round portions, then emit in meal order.
         dayEntries.forEach(e => { e.grams = e.role === 'vegetables' ? e.grams : roundPortion(e.food, e.grams); });
         const order = { protein: 0, carbs: 1, fruit: 1, fats: 2, vegetables: 3 };
+        const rank = e => e.role === 'fixed' ? e.order : order[e.role];
         MEAL_TEMPLATES.forEach(tpl => {
             dayEntries
                 .filter(e => e.meal === tpl.meal)
-                .sort((a, b) => order[a.role] - order[b.role])
+                .sort((a, b) => rank(a) - rank(b))
                 .forEach((e, i) => items.push({
                     day_of_week: d + 1,
                     meal: tpl.meal,
                     food_id: e.food.food_id,
                     grams: e.grams,
                     sort_order: i,
+                    saved_meal_id: e.savedMealId || null,
                 }));
         });
     }
 
-    return { items, fallbacks, missing: [...missing] };
+    return { items, fallbacks, missing: [...missing], favouritesPlaced };
+}
+
+// Same meal, same key: a saved meal by id, anything else by its set of foods.
+function mealSignature(savedMealId, foodIds) {
+    return savedMealId ? `s:${savedMealId}` : `f:${[...new Set(foodIds.map(Number))].sort((a, b) => a - b).join(',')}`;
+}
+
+/**
+ * Favourites from the meal log: meals eaten at least twice in the last
+ * FAVOURITE_WEEKS weeks, per meal slot, most eaten first.
+ * logs:       meal_log rows   savedMeals: [{ meal_id, items: [{ food_id, grams }] }]
+ */
+function favouritesFromLog(logs, savedMeals, todayIso) {
+    const since = new Date(todayIso + 'T00:00:00');
+    since.setDate(since.getDate() - FAVOURITE_WEEKS * 7);
+    const pad = n => String(n).padStart(2, '0');
+    const sinceIso = `${since.getFullYear()}-${pad(since.getMonth() + 1)}-${pad(since.getDate())}`;   // local date, not UTC
+    const savedById = Object.fromEntries(savedMeals.map(m => [m.meal_id, m]));
+
+    const groups = {};
+    logs.filter(l => l.eaten_on > sinceIso && l.eaten_on <= todayIso).forEach(l => {
+        const key = `${l.meal}|${l.signature}`;
+        const g = groups[key] || (groups[key] = { meal: l.meal, count: 0, latest: l });
+        g.count++;
+        if (l.eaten_on >= g.latest.eaten_on) g.latest = l;
+    });
+
+    return Object.values(groups)
+        .filter(g => g.count >= 2)
+        .map(g => {
+            const saved = g.latest.saved_meal_id && savedById[g.latest.saved_meal_id];
+            const items = saved
+                ? saved.items.map(it => ({ food_id: it.food_id, grams: Number(it.grams) }))
+                : (g.latest.items || []).map(it => ({ food_id: it.food_id, grams: Number(it.grams) }));
+            return { meal: g.meal, count: g.count, savedMealId: saved ? saved.meal_id : null, name: g.latest.name, items };
+        })
+        .sort((a, b) => b.count - a.count);
 }
 
 // Node export for testing; ignored in the browser.
-if (typeof module !== 'undefined') module.exports = { generateMealPlan, MEAL_TEMPLATES, itemMacros };
+if (typeof module !== 'undefined') {
+    module.exports = { generateMealPlan, MEAL_TEMPLATES, itemMacros, mealSignature, favouritesFromLog, favouriteDays };
+}
