@@ -132,7 +132,7 @@ async function loadExercises() {
 }
 
 function currentBodyweight() {
-    return Number(document.getElementById('w-bodyweight').value) || Number(profile.current_weight);
+    return parseDecimal(document.getElementById('w-bodyweight').value) || Number(profile.current_weight);
 }
 
 // ---- Draft (form state kept in the session) -----------------
@@ -402,7 +402,7 @@ function addSet(blockId, values = {}) {
     row.innerHTML = `
         <span class="set-tag">${t('wo.setN', { n: setNo })}</span>
         <input type="number" class="set-reps" min="1" placeholder="${t('wo.repsPh')}" value="${escapeHtml(values.reps || '')}">
-        <input type="number" class="set-weight" step="0.5" placeholder="kg" value="${escapeHtml(values.weight || '')}">
+        <input type="text" class="set-weight" inputmode="decimal" placeholder="kg" value="${escapeHtml(values.weight || '')}">
         <button type="button" class="icon-btn" onclick="this.closest('.set-row').remove(); saveDraft();">×</button>
     `;
     wrap.appendChild(row);
@@ -441,7 +441,7 @@ async function saveWorkout() {
                 exercise_order: order,
                 set_number: setNo,
                 reps: reps ? Number(reps) : null,
-                weight: weight ? Number(weight) : null,
+                weight: parseDecimal(weight),
             });
         });
     });

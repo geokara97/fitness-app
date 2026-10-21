@@ -110,10 +110,13 @@ async function workoutBurnFor(date) {
     return (data || []).reduce((s, w) => s + Number(w.calories_burned || 0), 0);
 }
 
-// Weight in effect on a given date (latest log on/before it).
+// Weight in effect on a given date (latest log on/before it). Days before the
+// first weigh-in use the start weight; with no weigh-ins at all, the current weight.
 function buildWeightLookup(weightRows) {
+    const before = weightRows.length
+        ? Number(profile.start_weight) || Number(profile.current_weight) : Number(profile.current_weight);
     return (date) => {
-        let w = Number(profile.current_weight);
+        let w = before;
         for (const r of weightRows) { if (r.log_date <= date) w = Number(r.weight); }
         return w;
     };
@@ -267,10 +270,12 @@ async function saveDay() {
             if ('calories_eaten' in row) loadedEaten = document.getElementById('f-eaten').value;
         }
 
-        // Weight log
-        if (weight !== null) {
-            const { error: wErr } = await db.from('weight_log').upsert(
-                { log_date: date, weight: weight }, { onConflict: 'log_date' });
+        // Weight log: save the weigh-in, or remove it when the field was cleared.
+        const weightCleared = weight === null && editSnapshot && editSnapshot['f-weight'] !== '';
+        if (weight !== null || weightCleared) {
+            const { error: wErr } = weight !== null
+                ? await db.from('weight_log').upsert({ log_date: date, weight: weight }, { onConflict: 'log_date' })
+                : await db.from('weight_log').delete().eq('log_date', date);
             if (wErr) throw wErr;
 
             // Keep profile.current_weight in sync with the most recent weigh-in.
@@ -306,7 +311,7 @@ async function refreshBreakdown(date) {
 
     const { data: dLog } = await db.from('daily_log').select('*').eq('log_date', date).maybeSingle();
     const steps = dLog && dLog.steps ? Number(dLog.steps) : 0;
-    const eaten = dLog && dLog.calories_eaten ? Number(dLog.calories_eaten) : null;
+    const eaten = dLog && dLog.calories_eaten != null ? Number(dLog.calories_eaten) : null;
     const wBurn = await workoutBurnFor(date);
 
     const resting = calcRestingBurn(weight, profile);
@@ -421,7 +426,7 @@ async function refreshCharts() {
     (workoutRows || []).forEach(w => {
         burnByDate[w.workout_date] = (burnByDate[w.workout_date] || 0) + Number(w.calories_burned || 0);
     });
-    const logged = (dailyRows || []).filter(d => d.calories_eaten);
+    const logged = (dailyRows || []).filter(d => d.calories_eaten != null);
 
     const nCtx = resetChartBox('net-box', 'net-chart');
     if (netChart) { netChart.destroy(); netChart = null; }
@@ -509,12 +514,12 @@ async function refreshHistory() {
         const total = calcTotalBurned(w, Number(d.steps || 0), wBurn, profile);
         const eaten = d.calories_eaten;
         const parts = [];
-        if (eaten) parts.push(`${Number(eaten).toLocaleString(LOCALE)} kcal`);
+        if (eaten != null) parts.push(`${Number(eaten).toLocaleString(LOCALE)} kcal`);
         if (d.steps) parts.push(`${Number(d.steps).toLocaleString(LOCALE)} ${t('trk.stepsUnit')}`);
         if (weightExact[d.log_date]) parts.push(`${weightExact[d.log_date]} kg`);
         if (wBurn) parts.push(`🔥 ${round(wBurn)}`);
         let net = '';
-        if (eaten) {
+        if (eaten != null) {
             const n = eaten - total;
             net = `<span class="badge ${n < 0 ? 'green' : 'red'}">${n > 0 ? '+' : ''}${round(n)}</span>`;
         }

@@ -83,6 +83,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     setMode(macroMode, { initial: true });
     if (typeof attachTabIndicator === 'function') attachTabIndicator(document.getElementById('macro-mode'), '.main-tab');
 
+    // Auto macros follow calories and bodyweight. If the stored ones are out of date
+    // (e.g. a new weigh-in since), store the worked-out values now, so Nutrition
+    // uses exactly what this page shows.
+    if (macroMode === 'auto') {
+        const p = formProfile();
+        const stale = ['protein_target', 'carbs_target', 'fat_target'].some(k => Number(profile[k]) !== p[k]);
+        if (stale) {
+            const { error } = await db.from('profile').update({
+                protein_target: p.protein_target, carbs_target: p.carbs_target, fat_target: p.fat_target,
+            }).eq('id', 1);
+            if (!error) clearProfileCache();
+        }
+    }
+
     savedSnapshot = snapshot();
     savedMode = macroMode;
     updateDirty();

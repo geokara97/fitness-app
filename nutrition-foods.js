@@ -282,15 +282,21 @@ async function saveFood(e) {
     const slots = [...document.querySelectorAll('input[name="ff-slot"]:checked')].map(c => c.value);
     if (!slots.length) { showToast(t('foods.needSlot'), 'error'); return; }
 
+    // Per 100 g: kcal 0–900, each macro 0–100 g.
+    const macro = (id, max) => {
+        const v = parseDecimal(document.getElementById(id).value);
+        return v !== null && v >= 0 && v <= max ? round(v, 1) : null;
+    };
+    const kcal = macro('ff-kcal', 900), protein = macro('ff-protein', 100),
+          carbs = macro('ff-carbs', 100), fat = macro('ff-fat', 100);
+    if ([kcal, protein, carbs, fat].includes(null)) { showToast(t('foods.badMacros'), 'error'); return; }
+
     const piece = document.getElementById('ff-piece').value;
     const row = {
         name_en: document.getElementById('ff-name-en').value.trim(),
         name_el: document.getElementById('ff-name-el').value.trim() || null,
         category: document.getElementById('ff-category').value,
-        kcal: Number(document.getElementById('ff-kcal').value),
-        protein: Number(document.getElementById('ff-protein').value),
-        carbs: Number(document.getElementById('ff-carbs').value),
-        fat: Number(document.getElementById('ff-fat').value),
+        kcal, protein, carbs, fat,
         piece_grams: piece ? Number(piece) : null,
         meal_slots: slots,
         is_custom: true,

@@ -209,17 +209,32 @@ function finishDay(dayEntries, targets) {
  * vegetables keep their grams; every other food is re-solved like a fresh plan.
  * Extra meals the user logged on a day (not one of the four) are kept exactly
  * as they are and don't change how the other meals are fitted.
+ * keep(row) marks meals that must not change either (past days, meals already
+ * eaten); those count toward the day, so the other meals fill what is left.
  * Returns rows in the same shape with new grams.
  */
-function refitMealPlan(rows, foodById, targets) {
+function refitMealPlan(rows, foodById, targets, keep = () => false) {
     const out = [];
     const basic = new Set(MEAL_TEMPLATES.map(tpl => tpl.meal));
     for (let d = 1; d <= 7; d++) {
-        const extras = rows.filter(r => r.day_of_week === d && !basic.has(r.meal) && foodById[r.food_id]);
+        const dayRows = rows.filter(r => r.day_of_week === d && foodById[r.food_id]);
+        const extras = dayRows.filter(r => !basic.has(r.meal));
+        const kept = dayRows.filter(r => basic.has(r.meal) && keep(r));
+        const keptMacros = sumMacros(kept.map(r => ({ food: foodById[r.food_id], grams: Number(r.grams) })));
+        const dayTargets = {
+            kcal: Math.max(0, targets.kcal - keptMacros.kcal),
+            protein: Math.max(0, targets.protein - keptMacros.p),
+            carbs: Math.max(0, targets.carbs - keptMacros.c),
+            fat: Math.max(0, targets.fat - keptMacros.f),
+        };
+        // The meals being fitted share what is left of the day between them.
+        const active = MEAL_TEMPLATES.filter(tpl => dayRows.some(r => r.meal === tpl.meal && !keep(r)));
+        const activeShare = active.reduce((sum, tpl) => sum + tpl.share, 0) || 1;
         const dayEntries = [];
         MEAL_TEMPLATES.forEach(tpl => {
+            const share = tpl.share / activeShare;
             const mealRows = rows
-                .filter(r => r.day_of_week === d && r.meal === tpl.meal && foodById[r.food_id])
+                .filter(r => r.day_of_week === d && r.meal === tpl.meal && !keep(r) && foodById[r.food_id])
                 .sort((a, b) => a.sort_order - b.sort_order);
             if (!mealRows.length) return;
             const entries = mealRows.map(r => {
@@ -231,7 +246,7 @@ function refitMealPlan(rows, foodById, targets) {
 
             if (entries.some(e => e.savedMealId)) {
                 const kcal = sumMacros(entries).kcal;
-                const factor = kcal > 0 ? Math.min(1.3, Math.max(0.7, (targets.kcal * tpl.share) / kcal)) : 1;
+                const factor = kcal > 0 ? Math.min(1.3, Math.max(0.7, (dayTargets.kcal * share) / kcal)) : 1;
                 entries.forEach(e => { e.grams *= factor; e.role = 'fixed'; });
             } else {
                 const fixed = [0, 0, 0];
@@ -239,7 +254,7 @@ function refitMealPlan(rows, foodById, targets) {
                     .forEach(e => macroVec(e.food).forEach((m, k) => { fixed[k] += m * e.grams; }));
                 const parts = entries.filter(e => e.role !== 'vegetables')
                     .map(e => ({ entry: e, role: e.role, vec: macroVec(e.food), bounds: portionBounds(e.food, e.role) }));
-                const target = [targets.protein * tpl.share, targets.carbs * tpl.share, targets.fat * tpl.share];
+                const target = [dayTargets.protein * share, dayTargets.carbs * share, dayTargets.fat * share];
                 const grams = solveMeal(parts, target, fixed);
                 // Keep every food the user sees in the plan: never solve one away.
                 parts.forEach((part, i) => { part.entry.grams = grams[i] > 0 ? grams[i] : part.bounds.min; });
@@ -247,12 +262,12 @@ function refitMealPlan(rows, foodById, targets) {
             dayEntries.push(...entries);
         });
 
-        finishDay(dayEntries, targets);
+        finishDay(dayEntries, dayTargets);
         dayEntries.forEach(e => out.push({
             day_of_week: d, meal: e.meal, food_id: e.food.food_id, grams: e.grams,
             sort_order: e.order, saved_meal_id: e.savedMealId,
         }));
-        extras.forEach(r => out.push({
+        [...kept, ...extras].forEach(r => out.push({
             day_of_week: d, meal: r.meal, food_id: r.food_id, grams: Number(r.grams),
             sort_order: r.sort_order, saved_meal_id: r.saved_meal_id || null,
         }));

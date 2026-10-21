@@ -42,10 +42,13 @@ async function renderGoal(p) {
     document.getElementById('s-remaining').textContent = `${round(Math.max(0, remaining), 1)} kg`;
 
     if (p.goal_date) {
-        const days = Math.max(0, Math.round((new Date(p.goal_date) - new Date()) / 86400000));
+        // Local midnight on both sides: a plain "YYYY-MM-DD" would be read as UTC.
+        const goalDay = new Date(p.goal_date + 'T00:00:00');
+        const today = new Date(todayISO() + 'T00:00:00');
+        const days = Math.max(0, Math.round((goalDay - today) / 86400000));
         document.getElementById('s-days').textContent = days;
         document.getElementById('goal-date-line').textContent =
-            t('dash.targetDate', { date: new Date(p.goal_date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' }) });
+            t('dash.targetDate', { date: goalDay.toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' }) });
     } else {
         document.getElementById('s-days').textContent = '—';
     }
@@ -64,7 +67,7 @@ async function renderToday(p) {
         ? Number(weightRes.data[0].weight) : Number(p.current_weight);
     const workoutBurn = (workoutRes.data || []).reduce((s, w) => s + Number(w.calories_burned || 0), 0);
 
-    const eaten = log && log.calories_eaten ? Number(log.calories_eaten) : null;
+    const eaten = log && log.calories_eaten != null ? Number(log.calories_eaten) : null;
     const steps = log && log.steps ? Number(log.steps) : 0;
     const totalBurned = calcTotalBurned(weight, steps, workoutBurn, p);
 
@@ -98,8 +101,10 @@ async function renderWeek(p) {
     ]);
 
     const weights = weightRes.data || [];
+    // Days before the first weigh-in use the start weight (same rule as the Tracker).
+    const before = weights.length ? Number(p.start_weight) || Number(p.current_weight) : Number(p.current_weight);
     const weightOn = (date) => {
-        let w = Number(p.current_weight);
+        let w = before;
         for (const row of weights) { if (row.log_date <= date) w = Number(row.weight); }
         return w;
     };
@@ -108,7 +113,7 @@ async function renderWeek(p) {
         burnByDate[w.workout_date] = (burnByDate[w.workout_date] || 0) + Number(w.calories_burned || 0);
     });
 
-    const logged = (dailyRes.data || []).filter(d => d.calories_eaten);
+    const logged = (dailyRes.data || []).filter(d => d.calories_eaten != null);
     let sumEaten = 0, sumBurned = 0;
     logged.forEach(d => {
         const w = weightOn(d.log_date);

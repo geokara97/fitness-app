@@ -249,7 +249,12 @@ function planTargetsDiffer(row) {
 
 async function refitPlan(plan) {
     const tg = profileTargets();
-    const rows = refitMealPlan(plan.rows, NUT.foodsById, tg)
+    const today = todayISO();
+    const keep = r => {
+        const date = dateOfDay(r.day_of_week - 1, plan.meta.week_start || NUT.weekStart);
+        return date < today || (NUT.mealsReady && !!findLog(date, r.meal));
+    };
+    const rows = refitMealPlan(plan.rows, NUT.foodsById, tg, keep)
         .map(r => {
             const row = { plan_id: plan.meta.plan_id, ...r };
             if (!NUT.mealsReady) delete row.saved_meal_id;   // column added by meals_schema.sql
