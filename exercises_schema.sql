@@ -1,5 +1,5 @@
 -- ============================================================
--- FitTrack Personal — exercises & splits upgrade
+-- Metron — exercises & splits upgrade
 -- Run in the Supabase SQL Editor AFTER schema.sql (safe to re-run).
 --
 -- What it changes:

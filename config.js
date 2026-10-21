@@ -1,5 +1,5 @@
 // ============================================================
-// FitTrack Personal — shared config, Supabase client & helpers
+// Metron — shared config, Supabase client & helpers
 // ============================================================
 
 // ---- Supabase credentials -----------------------------------
@@ -307,7 +307,7 @@ function renderNav(active) {
     const el = document.getElementById('app-nav');
     if (!el) return;
     el.innerHTML = `
-        <a href="index.html" class="nav-brand">\u{1F4AA} FitTrack</a>
+        <a href="index.html" class="nav-brand"><img src="icon.svg" alt="" width="26" height="26">Metron</a>
         <span class="nav-title" aria-hidden="true"></span>
         <button class="nav-toggle" aria-label="${t('nav.menu')}">☰</button>
         <button class="lang-toggle" title="${t('nav.switchTitle')}">${t('nav.switchTo')}</button>

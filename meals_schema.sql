@@ -1,5 +1,5 @@
 -- ============================================================
--- FitTrack Personal — saved meals & meal log
+-- Metron — saved meals & meal log
 -- Run in the Supabase SQL Editor AFTER nutrition_schema.sql (safe to re-run).
 --
 --   saved_meals / saved_meal_items : your own meals (foods + grams, optional 1–10 rating, e.g. 7.5)

@@ -1,5 +1,5 @@
 -- ============================================================
--- FitTrack Personal — nutrition tables (food preferences & generated plans)
+-- Metron — nutrition tables (food preferences & generated plans)
 -- Run in the Supabase SQL Editor AFTER schema.sql.
 --
 -- Macros are per 100 g, RAW weight unless the name says otherwise

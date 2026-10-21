@@ -1,5 +1,5 @@
 -- ============================================================
--- FitTrack Personal — Supabase / PostgreSQL schema
+-- Metron — Supabase / PostgreSQL schema
 -- Matches the current app code (single user, no login).
 --
 -- Run once in the Supabase SQL Editor of a NEW or EMPTY project.

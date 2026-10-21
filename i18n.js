@@ -1,5 +1,5 @@
 // ============================================================
-// FitTrack Personal — translations (English / Greek)
+// Metron — translations (English / Greek)
 // Load before config.js on every page.
 // ============================================================
 
@@ -53,7 +53,7 @@ const STRINGS = {
         'dayShort.Thursday': 'Thu', 'dayShort.Friday': 'Fri', 'dayShort.Saturday': 'Sat', 'dayShort.Sunday': 'Sun',
 
         // ---- Dashboard ----
-        'dash.title': 'FitTrack — Dashboard',
+        'dash.title': 'Metron — Dashboard',
         'dash.greeting': 'Your fat-loss journey at a glance.',
         'dash.goalProgress': '🎯 Goal Progress',
         'dash.targetDateNone': 'Target date —',
@@ -90,7 +90,7 @@ const STRINGS = {
         'dash.qWorkoutDesc': 'Timed session — calories counted live.',
 
         // ---- Daily tracker ----
-        'trk.title': 'FitTrack — Daily Tracker',
+        'trk.title': 'Metron — Daily Tracker',
         'trk.subtitle': 'Tap Edit to update the day, then Save. Burn is calculated for you.',
         'trk.logDay': '✏️ Log a Day',
         'trk.weight': 'Weight (kg)',
@@ -183,7 +183,7 @@ const STRINGS = {
         'trk.noEntry': 'Nothing logged',
 
         // ---- Nutrition ----
-        'np.title': 'FitTrack — Nutrition Plan',
+        'np.title': 'Metron — Nutrition Plan',
         'np.dailyTarget': 'Daily target',
         'np.protein': 'Protein',
         'np.carbs': 'Carbs',
@@ -375,7 +375,7 @@ const STRINGS = {
         'foods.duplicate': 'A food with this English name already exists.',
 
         // ---- Workout ----
-        'wo.title': 'FitTrack — Workout',
+        'wo.title': 'Metron — Workout',
         'wo.h1': 'Workout Session',
         'wo.subtitle': "Run the timer while you train — calories burned are counted live and saved to today's tracker.",
         'wo.state.idle': 'Ready',
@@ -383,7 +383,7 @@ const STRINGS = {
         'wo.state.paused': 'Paused',
         'wo.state.stopped': 'Finished',
         'wo.stop': '⏹ Stop',
-        'wo.editTitle': 'FitTrack — Edit workout',
+        'wo.editTitle': 'Metron — Edit workout',
         'wo.editH1': 'Edit workout',
         'wo.editSubtitle': 'Workout from {date}. Saving overwrites the original — your running timer (if any) is not affected.',
         'wo.backToHistory': '← Workout History',
@@ -456,7 +456,7 @@ const STRINGS = {
         'wo.errorSaving': 'Error saving workout: {msg}',
 
         // ---- History ----
-        'hist.title': 'FitTrack — Workout History',
+        'hist.title': 'Metron — Workout History',
         'hist.h1': 'Workout History',
         'hist.subtitle': 'Every training session, timed duration and calories burned.',
         'hist.total': 'Total workouts',
@@ -478,7 +478,7 @@ const STRINGS = {
         'hist.edit': 'Edit workout',
 
         // ---- Exercise hub ----
-        'ex.title': 'FitTrack — Exercise',
+        'ex.title': 'Metron — Exercise',
         'ex.subtitle': 'Log a workout, look back at your history, or manage your exercises.',
         'ex.back': '← Exercise',
         'ex.thisWeek': 'This week',
@@ -491,7 +491,7 @@ const STRINGS = {
         'ex.cardLibraryDesc': 'Add your own exercises and choose which splits they belong to.',
 
         // ---- Exercise library ----
-        'lib.title': 'FitTrack — Exercise Library',
+        'lib.title': 'Metron — Exercise Library',
         'lib.h1': 'Exercise Library',
         'lib.subtitle': 'Add exercises and choose which splits they belong to. When you log a workout, only exercises from the splits you pick are shown.',
         'lib.addTitle': '➕ Add an exercise',
@@ -518,7 +518,7 @@ const STRINGS = {
         'lib.hideBtn': 'Hide it',
 
         // ---- Settings ----
-        'set.title': 'FitTrack — Settings',
+        'set.title': 'Metron — Settings',
         'set.subtitle': 'Changes save automatically.',
         'set.language': '🌐 Language',
         'set.languageLabel': 'App language',
@@ -599,7 +599,7 @@ const STRINGS = {
         'dayShort.Thursday': 'Πέμ', 'dayShort.Friday': 'Παρ', 'dayShort.Saturday': 'Σάβ', 'dayShort.Sunday': 'Κυρ',
 
         // ---- Dashboard ----
-        'dash.title': 'FitTrack — Αρχική',
+        'dash.title': 'Metron — Αρχική',
         'dash.greeting': 'Η πορεία απώλειας λίπους με μια ματιά.',
         'dash.goalProgress': '🎯 Πρόοδος Στόχου',
         'dash.targetDateNone': 'Ημερομηνία στόχου —',
@@ -636,7 +636,7 @@ const STRINGS = {
         'dash.qWorkoutDesc': 'Χρονομετρημένη προπόνηση — οι θερμίδες μετρώνται ζωντανά.',
 
         // ---- Daily tracker ----
-        'trk.title': 'FitTrack — Ημερήσια Καταγραφή',
+        'trk.title': 'Metron — Ημερήσια Καταγραφή',
         'trk.subtitle': 'Πατήστε Επεξεργασία για να ενημερώσετε την ημέρα και μετά Αποθήκευση. Η καύση υπολογίζεται για εσάς.',
         'trk.logDay': '✏️ Καταγραφή Ημέρας',
         'trk.weight': 'Βάρος (kg)',
@@ -729,7 +729,7 @@ const STRINGS = {
         'trk.noEntry': 'Χωρίς καταγραφή',
 
         // ---- Nutrition ----
-        'np.title': 'FitTrack — Πρόγραμμα Διατροφής',
+        'np.title': 'Metron — Πρόγραμμα Διατροφής',
         'np.dailyTarget': 'Ημερήσιος στόχος',
         'np.protein': 'Πρωτεΐνη',
         'np.carbs': 'Υδατάνθρακες',
@@ -921,7 +921,7 @@ const STRINGS = {
         'foods.duplicate': 'Υπάρχει ήδη τροφή με αυτό το αγγλικό όνομα.',
 
         // ---- Workout ----
-        'wo.title': 'FitTrack — Προπόνηση',
+        'wo.title': 'Metron — Προπόνηση',
         'wo.h1': 'Προπόνηση',
         'wo.subtitle': 'Τρέξτε το χρονόμετρο όσο προπονείστε — οι θερμίδες μετρώνται ζωντανά και αποθηκεύονται στη σημερινή καταγραφή.',
         'wo.state.idle': 'Έτοιμο',
@@ -929,7 +929,7 @@ const STRINGS = {
         'wo.state.paused': 'Σε παύση',
         'wo.state.stopped': 'Ολοκληρώθηκε',
         'wo.stop': '⏹ Λήξη',
-        'wo.editTitle': 'FitTrack — Επεξεργασία προπόνησης',
+        'wo.editTitle': 'Metron — Επεξεργασία προπόνησης',
         'wo.editH1': 'Επεξεργασία προπόνησης',
         'wo.editSubtitle': 'Προπόνηση: {date}. Η αποθήκευση αντικαθιστά την αρχική — το χρονόμετρο που τρέχει (αν υπάρχει) δεν επηρεάζεται.',
         'wo.backToHistory': '← Ιστορικό Προπονήσεων',
@@ -1002,7 +1002,7 @@ const STRINGS = {
         'wo.errorSaving': 'Σφάλμα αποθήκευσης προπόνησης: {msg}',
 
         // ---- History ----
-        'hist.title': 'FitTrack — Ιστορικό Προπονήσεων',
+        'hist.title': 'Metron — Ιστορικό Προπονήσεων',
         'hist.h1': 'Ιστορικό Προπονήσεων',
         'hist.subtitle': 'Κάθε προπόνηση, με τη διάρκεια και τις θερμίδες που κάηκαν.',
         'hist.total': 'Συνολικές προπονήσεις',
@@ -1024,7 +1024,7 @@ const STRINGS = {
         'hist.edit': 'Επεξεργασία προπόνησης',
 
         // ---- Exercise hub ----
-        'ex.title': 'FitTrack — Άσκηση',
+        'ex.title': 'Metron — Άσκηση',
         'ex.subtitle': 'Καταγράψτε μια προπόνηση, δείτε το ιστορικό σας ή διαχειριστείτε τις ασκήσεις σας.',
         'ex.back': '← Άσκηση',
         'ex.thisWeek': 'Αυτή την εβδομάδα',
@@ -1037,7 +1037,7 @@ const STRINGS = {
         'ex.cardLibraryDesc': 'Προσθέστε δικές σας ασκήσεις και επιλέξτε σε ποια splits ανήκουν.',
 
         // ---- Exercise library ----
-        'lib.title': 'FitTrack — Βιβλιοθήκη Ασκήσεων',
+        'lib.title': 'Metron — Βιβλιοθήκη Ασκήσεων',
         'lib.h1': 'Βιβλιοθήκη Ασκήσεων',
         'lib.subtitle': 'Προσθέστε ασκήσεις και επιλέξτε σε ποια splits ανήκουν. Στην καταγραφή προπόνησης εμφανίζονται μόνο οι ασκήσεις των splits που επιλέγετε.',
         'lib.addTitle': '➕ Προσθήκη άσκησης',
@@ -1064,7 +1064,7 @@ const STRINGS = {
         'lib.hideBtn': 'Απόκρυψη',
 
         // ---- Settings ----
-        'set.title': 'FitTrack — Ρυθμίσεις',
+        'set.title': 'Metron — Ρυθμίσεις',
         'set.subtitle': 'Οι αλλαγές αποθηκεύονται αυτόματα.',
         'set.language': '🌐 Γλώσσα',
         'set.languageLabel': 'Γλώσσα εφαρμογής',

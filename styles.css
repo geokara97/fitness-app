@@ -1,5 +1,5 @@
 /* ============================================================
-   FitTrack Personal — stylesheet
+   Metron — stylesheet
    Phone-first, built on iOS system colours, materials and type.
    Follows the system light/dark setting.
    ============================================================ */
@@ -2078,3 +2078,6 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 /* Calories from goal: the number is worked out, so the −/+ buttons fade */
 .stepper.locked .stepper-btn { opacity: .35; }
 .stepper.locked .lr-input { color: var(--text); }
+
+.nav-brand { display: inline-flex; align-items: center; gap: 8px; }
+.nav-brand img { width: 26px; height: 26px; border-radius: 7px; }
