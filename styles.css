@@ -331,6 +331,9 @@ td.num, th.num { text-align: right; }
     color: var(--danger);
 }
 .icon-btn:hover { background: #fee2e2; }
+.icon-btn-edit { display: inline-flex; align-items: center; justify-content: center; font-size: .85rem; }
+.icon-btn-edit:hover { background: #e0e7ff; }
+.history-actions { display: flex; gap: 6px; }
 
 /* ---- Nutrition --------------------------------------------- */
 .day-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }

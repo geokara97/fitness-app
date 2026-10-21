@@ -12,8 +12,8 @@
     <div class="container">
         <a href="exercise.html" class="back-link" data-i18n="ex.back">← Exercise</a>
         <div class="page-head">
-            <h1 data-i18n="wo.h1">Workout Session</h1>
-            <p class="muted" data-i18n="wo.subtitle">Run the timer while you train — calories burned are counted live and saved to today's tracker.</p>
+            <h1 id="wo-heading" data-i18n="wo.h1">Workout Session</h1>
+            <p class="muted" id="wo-subtitle" data-i18n="wo.subtitle">Run the timer while you train — calories burned are counted live and saved to today's tracker.</p>
         </div>
 
         <!-- Timer -->
@@ -62,7 +62,8 @@
         <div class="card report-card" id="report" style="margin-top:16px">
             <div class="section-title mt-0" data-i18n="wo.report">📊 Session summary</div>
             <div class="grid cols-3">
-                <div class="stat"><div class="label" data-i18n="hist.duration">Duration</div><div class="value" id="rep-duration">00:00</div></div>
+                <div class="stat"><div class="label" data-i18n="hist.duration">Duration</div><div class="value" id="rep-duration">00:00</div>
+                    <div class="cal-input-row" id="rep-duration-edit" hidden><input type="number" id="w-duration-min" min="0" max="600" step="1" inputmode="numeric" aria-label="Duration in minutes"><span class="muted" data-i18n="wo.minutes">min</span></div></div>
                 <div class="stat"><div class="label" data-i18n="wo.repSets">Sets logged</div><div class="value" id="rep-sets">0</div></div>
                 <div class="stat">
                     <label class="label" for="w-calories" data-i18n="common.caloriesBurned">Calories burned</label>

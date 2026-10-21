@@ -89,7 +89,10 @@ function renderWorkout(w) {
                     <strong style="font-size:1.05rem">${formatDate(w.workout_date)}</strong>
                     ${splitBadges}
                 </div>
-                <button class="icon-btn" title="${t('common.delete')}" onclick="deleteWorkout(${w.workout_id})">×</button>
+                <span class="history-actions">
+                    <a class="icon-btn icon-btn-edit" href="workout.html?edit=${w.workout_id}" title="${t('hist.edit')}" aria-label="${t('hist.edit')}">✏️</a>
+                    <button class="icon-btn" title="${t('common.delete')}" onclick="deleteWorkout(${w.workout_id})">×</button>
+                </span>
             </div>
             <div class="grid cols-3" style="margin:12px 0">
                 <div class="stat"><div class="label">${t('hist.duration')}</div><div class="value" style="font-size:1.2rem">${durationLabel(w.duration_seconds)}</div></div>

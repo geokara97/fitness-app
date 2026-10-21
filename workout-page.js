@@ -12,7 +12,13 @@ const selectedSplits = new Set();   // split_ids chosen for this session
 let exerciseCount = 0;
 let draftTimer = null;
 
+// Edit mode: workout.html?edit=<workout_id> edits a saved workout. It never
+// touches the live timer session, so a running workout keeps going.
+const EDIT_ID = Number(new URLSearchParams(location.search).get('edit')) || null;
+let editState = null;        // { durationSec, manualCalories }
+
 document.addEventListener('DOMContentLoaded', async () => {
+    if (EDIT_ID) document.body.dataset.page = 'workout-edit';   // show the session bar if a workout is running
     renderNav('exercise');
     try {
         profile = await loadProfile();
@@ -20,7 +26,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadSplits();
     await loadExercises();
-    await restoreOrInitForm();
+    if (EDIT_ID) {
+        if (!(await loadWorkoutForEdit())) return;
+    } else {
+        await restoreOrInitForm();
+    }
 
     document.getElementById('btn-start').addEventListener('click', startTimer);
     document.getElementById('btn-pause').addEventListener('click', () => { sessionPause(); updateTimerUI(); });
@@ -32,8 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('w-splits').addEventListener('click', onSplitChipClick);
     document.getElementById('w-calories').addEventListener('input', onCaloriesInput);
     document.getElementById('w-calories').addEventListener('blur', updateTimerUI);
+    document.getElementById('w-duration-min').addEventListener('input', e => {
+        editState.durationSec = Math.max(0, Math.round(Number(e.target.value) * 60)) || 0;
+        updateTimerUI();
+    });
     document.getElementById('btn-cal-auto').addEventListener('click', () => {
-        updateSession({ manualCalories: null });
+        setManualCalories(null);
         updateTimerUI();
     });
     // Any edit in the form is saved to the draft (debounced).
@@ -42,12 +56,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     initNewExerciseModal();
 
-    onSessionChange(updateTimerUI);           // e.g. paused from the bar in another tab
-    setInterval(updateTimerUI, 500);
+    if (!EDIT_ID) {
+        onSessionChange(updateTimerUI);           // e.g. paused from the bar in another tab
+        setInterval(updateTimerUI, 500);
+    }
     updateTimerUI();
 
     if (location.hash === '#report') showReport();
 });
+
+// ---- Edit a saved workout -----------------------------------
+async function loadWorkoutForEdit() {
+    const { data: w, error } = await db.from('workouts')
+        .select('*, workout_splits(split_id), workout_exercises(*)')
+        .eq('workout_id', EDIT_ID).maybeSingle();
+    if (error || !w) {
+        showToast(t('wo.notFound'), 'error');
+        setTimeout(() => { window.location.href = 'history.html'; }, 1200);
+        return false;
+    }
+
+    document.title = t('wo.editTitle');
+    document.getElementById('wo-heading').textContent = t('wo.editH1');
+    document.getElementById('wo-subtitle').textContent = t('wo.editSubtitle', { date: formatDate(w.workout_date) });
+    document.querySelector('.back-link').href = 'history.html';
+    document.querySelector('.back-link').textContent = t('wo.backToHistory');
+    document.querySelector('.timer-card').hidden = true;
+    document.getElementById('rep-duration').hidden = true;
+    document.getElementById('rep-duration-edit').hidden = false;
+    document.getElementById('btn-save').textContent = t('wo.saveChanges');
+    document.getElementById('btn-discard').textContent = t('wo.cancelEdit');
+
+    document.getElementById('w-date').value = w.workout_date;
+    document.getElementById('w-bodyweight').value = w.bodyweight ?? '';
+    if (!document.getElementById('w-bodyweight').value) await prefillBodyweight();
+    document.getElementById('w-notes').value = w.notes || '';
+    selectedSplits.clear();
+    (w.workout_splits || []).forEach(s => selectedSplits.add(s.split_id));
+    renderSplitChips();
+
+    // Sets grouped back into exercise blocks, in their logged order.
+    const blocks = {};
+    (w.workout_exercises || []).forEach(we => {
+        const key = `${we.exercise_order}-${we.exercise_id}`;
+        (blocks[key] = blocks[key] || { order: we.exercise_order || 0, exerciseId: we.exercise_id, sets: [] }).sets.push(we);
+    });
+    const ordered = Object.values(blocks).sort((a, b) => a.order - b.order);
+    (ordered.length ? ordered : [{ exerciseId: '', sets: [] }]).forEach(b => addExerciseBlock(
+        b.exerciseId ? Number(b.exerciseId) : '',
+        b.sets.sort((x, y) => (x.set_number || 0) - (y.set_number || 0))
+              .map(s => ({ reps: s.reps ?? '', weight: s.weight ?? '' }))));
+
+    // Calories that differ from the duration-based estimate were entered by hand (e.g. a smartwatch).
+    const durationSec = w.duration_seconds || 0;
+    const estimate = round(calcWorkoutBurn(currentBodyweight(), durationSec / 60, profile), 1);
+    editState = {
+        durationSec,
+        manualCalories: Math.abs(Number(w.calories_burned) - estimate) > 0.6 ? Number(w.calories_burned) : null,
+    };
+    document.getElementById('w-duration-min').value = round(durationSec / 60, 1);
+    return true;
+}
 
 // ---- Data ---------------------------------------------------
 async function loadSplits() {
@@ -57,7 +126,8 @@ async function loadSplits() {
 }
 
 async function loadExercises() {
-    try { exercises = await fetchExercises(); }
+    // Edit mode also needs hidden exercises an old workout may contain.
+    try { exercises = await fetchExercises({ includeHidden: !!EDIT_ID }); }
     catch (e) { showToast(t('wo.dbUpgrade'), 'error'); }
 }
 
@@ -89,6 +159,7 @@ function draftHasContent(d) {
 
 function saveDraft() {
     clearTimeout(draftTimer);
+    if (EDIT_ID) { updateTimerUI(); return; }   // editing a saved workout: no live-session draft
     updateSession({
         draft: collectDraft(),
         bodyweight: currentBodyweight(),
@@ -160,8 +231,9 @@ function onSplitChipClick(e) {
 
 // Exercises in any selected split (all exercises when none is selected).
 function filteredExercises() {
-    if (!selectedSplits.size) return exercises;
-    return exercises.filter(e => e.splitIds.some(id => selectedSplits.has(id)));
+    const active = exercises.filter(e => e.is_active !== false);   // hidden ones only via "Already chosen"
+    if (!selectedSplits.size) return active;
+    return active.filter(e => e.splitIds.some(id => selectedSplits.has(id)));
 }
 
 // <option>s grouped by split; each exercise listed once, under its first matching split.
@@ -230,16 +302,32 @@ function countLoggedSets() {
             .filter(r => r.querySelector('.set-reps').value || r.querySelector('.set-weight').value).length, 0);
 }
 
-function updateTimerUI() {
-    if (!profile) return;
+// Duration & typed calories come from the live session, or from the saved workout in edit mode.
+function currentElapsedMs() {
+    return EDIT_ID ? (editState ? editState.durationSec * 1000 : 0) : sessionElapsedMs(readSession());
+}
+
+function currentManualCalories() {
+    if (EDIT_ID) return editState && editState.manualCalories != null ? Number(editState.manualCalories) : null;
     const s = readSession();
+    return s && s.manualCalories != null ? Number(s.manualCalories) : null;
+}
+
+function setManualCalories(value) {
+    if (EDIT_ID) { if (editState) editState.manualCalories = value; }
+    else updateSession({ manualCalories: value });
+}
+
+function updateTimerUI() {
+    if (!profile || (EDIT_ID && !editState)) return;
+    const s = EDIT_ID ? null : readSession();
     const state = (s && s.state) || 'idle';
-    const elapsed = sessionElapsedMs(s);
+    const elapsed = currentElapsedMs();
     const clock = formatClock(elapsed / 1000);
     const bw = currentBodyweight();
     const rate = Number(profile.lifting_kcal_per_kg_min);
     const auto = calcWorkoutBurn(bw, elapsed / 60000, profile);
-    const manual = s && s.manualCalories != null ? Number(s.manualCalories) : null;
+    const manual = currentManualCalories();
 
     document.getElementById('timer-display').textContent = clock;
     document.getElementById('timer-burn').textContent = manual != null
@@ -272,7 +360,7 @@ function updateTimerUI() {
 // Typed calories (e.g. from a smartwatch) override the timer estimate.
 function onCaloriesInput(e) {
     const v = e.target.value;
-    updateSession({ manualCalories: v === '' ? null : Math.max(0, Number(v)) });
+    setManualCalories(v === '' ? null : Math.max(0, Number(v)));
 }
 
 // ---- Exercise blocks ----------------------------------------
@@ -321,10 +409,9 @@ function addSet(blockId, values = {}) {
 
 // ---- Save / discard -----------------------------------------
 async function saveWorkout() {
-    const s = readSession();
-    const secs = Math.round(sessionElapsedMs(s) / 1000);
-    const manual = s && s.manualCalories != null ? Number(s.manualCalories) : null;
-    if (secs < 5 && manual == null) {
+    const secs = Math.round(currentElapsedMs() / 1000);
+    const manual = currentManualCalories();
+    if (!EDIT_ID && secs < 5 && manual == null) {
         if (!confirm(t('wo.confirmZero'))) return;
     }
 
@@ -360,6 +447,13 @@ async function saveWorkout() {
 
     const btn = document.getElementById('btn-save');
     btn.disabled = true;
+
+    if (EDIT_ID) {
+        await updateSavedWorkout({ date, secs, bodyweight, calories, notes, exerciseRows });
+        btn.disabled = false;
+        return;
+    }
+
     let workoutId = null;
     try {
         const { data: workout, error: wErr } = await db.from('workouts').insert([{
@@ -384,9 +478,10 @@ async function saveWorkout() {
             if (eErr) throw eErr;
         }
 
-        clearSession();   // session saved — stop the timer everywhere
+        clearSession();   // session saved — timer back to 00:00 everywhere
+        updateTimerUI();
         showToast(t('wo.saved', { kcal: round(calories), date: formatDate(date) }));
-        setTimeout(() => { window.location.href = 'history.html'; }, 1400);
+        setTimeout(() => { window.location.href = 'history.html'; }, 900);
     } catch (err) {
         // Don't leave a half-saved workout behind (splits & sets cascade).
         if (workoutId) await db.from('workouts').delete().eq('workout_id', workoutId);
@@ -395,7 +490,39 @@ async function saveWorkout() {
     }
 }
 
+// Overwrite a saved workout: its row, splits and sets.
+async function updateSavedWorkout({ date, secs, bodyweight, calories, notes, exerciseRows }) {
+    try {
+        const { error: wErr } = await db.from('workouts').update({
+            workout_date: date, duration_seconds: secs, bodyweight, calories_burned: calories, notes,
+        }).eq('workout_id', EDIT_ID);
+        if (wErr) throw wErr;
+
+        const { error: dsErr } = await db.from('workout_splits').delete().eq('workout_id', EDIT_ID);
+        if (dsErr) throw dsErr;
+        if (selectedSplits.size) {
+            const { error } = await db.from('workout_splits')
+                .insert([...selectedSplits].map(split_id => ({ workout_id: EDIT_ID, split_id })));
+            if (error) throw error;
+        }
+
+        const { error: deErr } = await db.from('workout_exercises').delete().eq('workout_id', EDIT_ID);
+        if (deErr) throw deErr;
+        if (exerciseRows.length) {
+            const { error } = await db.from('workout_exercises')
+                .insert(exerciseRows.map(r => ({ ...r, workout_id: EDIT_ID })));
+            if (error) throw error;
+        }
+
+        showToast(t('wo.updated'));
+        setTimeout(() => { window.location.href = 'history.html'; }, 900);
+    } catch (err) {
+        showToast(t('wo.errorSaving', { msg: err.message }), 'error');
+    }
+}
+
 function discardWorkout() {
+    if (EDIT_ID) { window.location.href = 'history.html'; return; }   // cancel editing
     if (!confirm(t('wo.confirmDiscard'))) return;
     clearSession();
     showToast(t('wo.discarded'));
