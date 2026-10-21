@@ -200,7 +200,11 @@ async function saveDay() {
             const { data: latest } = await db.from('weight_log')
                 .select('weight').order('log_date', { ascending: false }).limit(1);
             if (latest && latest.length) {
-                await db.from('profile').update({ current_weight: latest[0].weight }).eq('id', 1);
+                // New bodyweight: protein (2.25 g/kg) and the carbs/fat that fill the target follow it.
+                await db.from('profile').update({
+                    current_weight: latest[0].weight,
+                    ...calcMacroTargets(profile.daily_calorie_target, latest[0].weight),
+                }).eq('id', 1);
                 clearProfileCache();
                 profile = await loadProfile();
             }
@@ -250,30 +254,30 @@ async function refreshBreakdown(date) {
     document.getElementById('bd-eaten').textContent = eaten !== null ? eaten.toLocaleString(LOCALE) : '—';
     document.getElementById('e-target').textContent = t('trk.ofTarget', { n: target.toLocaleString(LOCALE) });
 
-    const left = target - (eaten || 0);
-    const over = left < 0;
+    // Ring: calories burned minus eaten. It fills with the share of the day's
+    // burn you have eaten, and turns red once eating passes the burn (surplus).
+    const balance = total - (eaten || 0);
+    const surplus = balance < 0;
     const ring = document.getElementById('ring-fill');
     ring.style.strokeDasharray = RING_LENGTH;
-    ring.style.strokeDashoffset = RING_LENGTH * (1 - Math.min(1, (eaten || 0) / target));
-    ring.classList.toggle('over', over);
-    document.getElementById('ring-value').textContent = Math.abs(round(left)).toLocaleString(LOCALE);
-    document.getElementById('ring-label').textContent = t(over ? 'trk.over' : 'trk.left');
-    document.getElementById('ring-value').classList.toggle('bad', over);
+    ring.style.strokeDashoffset = RING_LENGTH * (1 - Math.min(1, total ? (eaten || 0) / total : 0));
+    ring.classList.toggle('over', surplus);
+    const ringValue = document.getElementById('ring-value');
+    ringValue.textContent = Math.abs(round(balance)).toLocaleString(LOCALE);
+    ringValue.classList.toggle('bad', surplus);
+    document.getElementById('ring-label').textContent = t(surplus ? 'trk.surplus' : 'trk.deficit');
 
-    const netEl = document.getElementById('bd-net');
+    // Calories still to eat before reaching the daily target
+    const leftEl = document.getElementById('bd-left');
+    const left = target - (eaten || 0);
+    leftEl.textContent = `${left < 0 ? '+' : ''}${Math.abs(round(left)).toLocaleString(LOCALE)}`;
+    leftEl.classList.toggle('bad', left < 0);
+
     const hint = document.getElementById('bd-hint');
-    netEl.classList.remove('good', 'bad');
-    if (eaten !== null) {
-        const net = eaten - total;
-        netEl.textContent = `${net > 0 ? '+' : ''}${round(net).toLocaleString(LOCALE)}`;
-        netEl.classList.add(net < 0 ? 'good' : 'bad');
-        hint.textContent = net < 0
-            ? t('trk.deficitHint', { n: round(-net) })
-            : t('trk.surplusHint', { n: round(net) });
-    } else {
-        netEl.textContent = '—';
-        hint.textContent = t('trk.enterCalories');
-    }
+    if (eaten === null) hint.textContent = t('trk.enterCalories');
+    else hint.textContent = surplus
+        ? t('trk.surplusHint', { n: round(-balance) })
+        : t('trk.deficitHint', { n: round(balance) });
 }
 
 // ---- Charts -------------------------------------------------

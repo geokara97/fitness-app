@@ -18,139 +18,108 @@
             <p class="muted" data-i18n="set.subtitle">Your personal stats and calorie-burn formula constants.</p>
         </div>
 
-        <!-- Language (saved in this browser, not the profile) -->
-        <div class="card">
-            <div class="section-title mt-0" data-i18n="set.language">🌐 Language</div>
-            <div class="form-group">
-                <label for="s-lang" data-i18n="set.languageLabel">App language</label>
-                <select id="s-lang">
-                    <option value="en">English</option>
-                    <option value="el">Ελληνικά</option>
-                </select>
+        <!-- Profile header -->
+        <div class="card profile-card">
+            <div class="avatar" id="pf-avatar" aria-hidden="true">?</div>
+            <div class="pf-text">
+                <div class="pf-name" id="pf-name">—</div>
+                <div class="pf-sub" id="pf-sub"></div>
+                <div class="progress pf-progress"><span id="pf-bar" style="width:0%"></span></div>
             </div>
         </div>
+        <div class="save-status" id="save-status" aria-live="polite"></div>
 
-        <form id="settings-form">
+        <!-- Language (saved in this browser, not the profile) -->
+        <div class="section-title" data-i18n="set.language">🌐 Language</div>
+        <div class="main-tabs lang-seg" role="tablist" aria-label="App language">
+            <button type="button" class="main-tab" data-lang="en" role="tab">English</button>
+            <button type="button" class="main-tab" data-lang="el" role="tab">Ελληνικά</button>
+        </div>
+
+        <form id="settings-form" autocomplete="off">
             <!-- Stats -->
-            <div class="card">
-                <div class="section-title mt-0" data-i18n="set.stats">👤 Your Stats</div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="s-name" data-i18n="set.name">Name</label>
-                        <input type="text" id="s-name">
-                    </div>
-                    <div class="form-group">
-                        <label for="s-age" data-i18n="set.age">Age</label>
-                        <input type="number" id="s-age" min="10" max="100">
-                    </div>
-                    <div class="form-group">
-                        <label for="s-gender" data-i18n="set.gender">Gender</label>
-                        <select id="s-gender">
-                            <option value="Male" data-i18n="set.male">Male</option>
-                            <option value="Female" data-i18n="set.female">Female</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="s-height" data-i18n="set.height">Height (cm)</label>
-                        <input type="number" id="s-height" step="0.1">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="s-activity" data-i18n="set.activity">Activity level</label>
-                    <select id="s-activity">
+            <div class="section-title" data-i18n="set.stats">👤 Your Stats</div>
+            <div class="list-group">
+                <label class="list-row"><span class="lr-label" data-i18n="set.name">Name</span>
+                    <input class="lr-input" type="text" id="s-name" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.age">Age</span>
+                    <input class="lr-input" type="number" id="s-age" min="10" max="100" inputmode="numeric" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.gender">Gender</span>
+                    <select class="lr-input" id="s-gender">
+                        <option value="Male" data-i18n="set.male">Male</option>
+                        <option value="Female" data-i18n="set.female">Female</option>
+                    </select></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.height">Height (cm)</span>
+                    <input class="lr-input" type="number" id="s-height" step="0.1" inputmode="decimal" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.activity">Activity level</span>
+                    <select class="lr-input" id="s-activity">
                         <option value="Sedentary (desk job)" data-i18n="act.sedentary">Sedentary (desk job)</option>
                         <option value="Lightly active" data-i18n="act.light">Lightly active</option>
                         <option value="Moderately active" data-i18n="act.moderate">Moderately active</option>
                         <option value="Very active" data-i18n="act.very">Very active</option>
-                    </select>
-                </div>
+                    </select></label>
             </div>
 
             <!-- Goal -->
-            <div class="card">
-                <div class="section-title mt-0" data-i18n="set.goal">🎯 Weight Goal</div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="s-start" data-i18n="set.start">Start weight (kg)</label>
-                        <input type="number" id="s-start" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label for="s-current" data-i18n="set.current">Current weight (kg)</label>
-                        <input type="number" id="s-current" step="0.1">
-                        <div class="hint" data-i18n="set.currentHint">Auto-updates when you log a weigh-in.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="s-goal" data-i18n="set.goalW">Goal weight (kg)</label>
-                        <input type="number" id="s-goal" step="0.1">
-                    </div>
-                    <div class="form-group">
-                        <label for="s-goaldate" data-i18n="set.targetDate">Target date</label>
-                        <input type="date" id="s-goaldate">
+            <div class="section-title" data-i18n="set.goal">🎯 Weight Goal</div>
+            <div class="list-group">
+                <label class="list-row"><span class="lr-label" data-i18n="set.start">Start weight (kg)</span>
+                    <input class="lr-input" type="number" id="s-start" step="0.1" inputmode="decimal" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.current">Current weight (kg)</span>
+                    <input class="lr-input" type="number" id="s-current" step="0.1" inputmode="decimal" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.goalW">Goal weight (kg)</span>
+                    <input class="lr-input" type="number" id="s-goal" step="0.1" inputmode="decimal" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.targetDate">Target date</span>
+                    <input class="lr-input" type="date" id="s-goaldate"></label>
+            </div>
+            <p class="list-footer" data-i18n="set.currentHint">Auto-updates when you log a weigh-in.</p>
+
+            <!-- Nutrition targets: calories set by you, macros worked out from them -->
+            <div class="section-title" data-i18n="set.nutrition">🥗 Nutrition Targets</div>
+            <div class="list-group">
+                <div class="list-row kcal-row">
+                    <label class="lr-label" for="s-kcal" data-i18n="set.kcal">Daily calorie target</label>
+                    <div class="stepper">
+                        <button type="button" class="stepper-btn" data-step="-50" aria-label="−50 kcal">−</button>
+                        <input class="lr-input" type="number" id="s-kcal" step="10" min="800" inputmode="numeric" enterkeyhint="done">
+                        <button type="button" class="stepper-btn" data-step="50" aria-label="+50 kcal">+</button>
                     </div>
                 </div>
+                <div class="macro-split">
+                    <div class="macro-tile mt-p"><span class="mt-name" data-i18n="np.protein">Protein</span><strong id="m-p">—</strong><span class="mt-sub" id="m-p-sub"></span></div>
+                    <div class="macro-tile mt-c"><span class="mt-name" data-i18n="np.carbs">Carbs</span><strong id="m-c">—</strong><span class="mt-sub" id="m-c-sub"></span></div>
+                    <div class="macro-tile mt-f"><span class="mt-name" data-i18n="np.fat">Fat</span><strong id="m-f">—</strong><span class="mt-sub" id="m-f-sub"></span></div>
+                    <div class="macro-bar" aria-hidden="true"><span class="mb-p" id="mb-p"></span><span class="mb-c" id="mb-c"></span><span class="mb-f" id="mb-f"></span></div>
+                </div>
+                <input type="hidden" id="s-protein"><input type="hidden" id="s-carbs"><input type="hidden" id="s-fat">
             </div>
+            <p class="list-footer" id="macro-rule"></p>
 
             <!-- Burn rates -->
-            <div class="card">
-                <div class="section-title mt-0" data-i18n="set.constants">⚡ Calorie-Burn Constants</div>
-                <p class="muted text-sm" data-i18n="set.constantsDesc">These drive every burn calculation, including the workout timer.</p>
-                <div class="form-row" style="margin-top:10px">
-                    <div class="form-group">
-                        <label for="s-lift-rate" data-i18n="set.liftRate">Lifting kcal / kg / min</label>
-                        <input type="number" id="s-lift-rate" step="0.001">
-                        <div class="hint" data-i18n="set.liftHint">Workout burn = bodyweight × this × minutes timed.</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="s-lift-min" data-i18n="set.liftMin">Default lifting session (min)</label>
-                        <input type="number" id="s-lift-min" step="1">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="s-walk" data-i18n="set.walk">Walking kcal / 1,000 steps</label>
-                        <input type="number" id="s-walk" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="s-neat" data-i18n="set.neat">NEAT multiplier</label>
-                        <input type="number" id="s-neat" step="0.01">
-                        <div class="hint" data-i18n="set.neatHint">BMR × this = resting daily burn.</div>
-                    </div>
-                </div>
+            <div class="section-title" data-i18n="set.constants">⚡ Calorie-Burn Constants</div>
+            <div class="list-group">
+                <label class="list-row"><span class="lr-label" data-i18n="set.liftRate">Lifting kcal / kg / min</span>
+                    <input class="lr-input" type="number" id="s-lift-rate" step="0.001" inputmode="decimal" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.liftMin">Default lifting session (min)</span>
+                    <input class="lr-input" type="number" id="s-lift-min" step="1" inputmode="numeric" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.walk">Walking kcal / 1,000 steps</span>
+                    <input class="lr-input" type="number" id="s-walk" step="1" inputmode="numeric" enterkeyhint="done"></label>
+                <label class="list-row"><span class="lr-label" data-i18n="set.neat">NEAT multiplier</span>
+                    <input class="lr-input" type="number" id="s-neat" step="0.01" inputmode="decimal" enterkeyhint="done"></label>
             </div>
-
-            <!-- Nutrition targets -->
-            <div class="card">
-                <div class="section-title mt-0" data-i18n="set.nutrition">🥗 Nutrition Targets</div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="s-kcal" data-i18n="set.kcal">Daily calorie target</label>
-                        <input type="number" id="s-kcal" step="10">
-                    </div>
-                    <div class="form-group">
-                        <label for="s-protein" data-i18n="set.protein">Protein (g)</label>
-                        <input type="number" id="s-protein" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="s-carbs" data-i18n="set.carbs">Carbs (g)</label>
-                        <input type="number" id="s-carbs" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="s-fat" data-i18n="set.fat">Fat (g)</label>
-                        <input type="number" id="s-fat" step="1">
-                    </div>
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-lg btn-block" data-i18n="set.save">Save Settings</button>
+            <p class="list-footer"><span data-i18n="set.constantsDesc">These drive every burn calculation, including the workout timer.</span>
+                <span data-i18n="set.liftHint">Workout burn = bodyweight × this × minutes timed.</span>
+                <span data-i18n="set.neatHint">BMR × this = resting daily burn.</span></p>
         </form>
 
         <!-- Computed -->
         <div class="section-title" data-i18n="set.numbers">📊 Your Current Numbers</div>
-        <div class="grid cols-4">
-            <div class="stat"><div class="label">BMR</div><div class="value" id="c-bmr">—</div><div class="sub" data-i18n="set.atRest">at rest</div></div>
-            <div class="stat"><div class="label" data-i18n="set.resting">Resting burn</div><div class="value" id="c-resting">—</div><div class="sub">BMR + NEAT</div></div>
-            <div class="stat"><div class="label" data-i18n="set.trainTdee">Training-day TDEE</div><div class="value" id="c-train">—</div><div class="sub" data-i18n="set.trainSub">+ 10k steps + lift</div></div>
-            <div class="stat"><div class="label" data-i18n="set.restTdee">Rest-day TDEE</div><div class="value" id="c-rest">—</div><div class="sub" data-i18n="set.restSub">+ 10k steps</div></div>
+        <div class="list-group">
+            <div class="list-row"><span class="lr-label">BMR <span class="lr-hint" data-i18n="set.atRest">at rest</span></span><span class="lr-value" id="c-bmr">—</span></div>
+            <div class="list-row"><span class="lr-label"><span data-i18n="set.resting">Resting burn</span> <span class="lr-hint">BMR + NEAT</span></span><span class="lr-value" id="c-resting">—</span></div>
+            <div class="list-row"><span class="lr-label"><span data-i18n="set.trainTdee">Training-day TDEE</span> <span class="lr-hint" data-i18n="set.trainSub">+ 10k steps + lift</span></span><span class="lr-value" id="c-train">—</span></div>
+            <div class="list-row"><span class="lr-label"><span data-i18n="set.restTdee">Rest-day TDEE</span> <span class="lr-hint" data-i18n="set.restSub">+ 10k steps</span></span><span class="lr-value" id="c-rest">—</span></div>
+            <div class="list-row"><span class="lr-label"><span data-i18n="set.deficit">Daily deficit</span> <span class="lr-hint" data-i18n="set.deficitSub">rest-day TDEE − target</span></span><span class="lr-value" id="c-deficit">—</span></div>
         </div>
     </div>
 

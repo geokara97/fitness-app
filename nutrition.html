@@ -31,17 +31,6 @@
                 <button class="btn btn-primary btn-sm" id="btn-generate" data-i18n="np.generate">✨ Generate my plan</button>
             </div>
 
-            <!-- Targets -->
-            <div class="grid cols-4" style="margin-top:16px">
-                <div class="stat accent"><div class="label" data-i18n="np.dailyTarget">Daily target</div><div class="value" id="np-kcal">1800</div><div class="sub">kcal</div></div>
-                <div class="stat"><div class="label" data-i18n="np.protein">Protein</div><div class="value" id="np-p">170 g</div></div>
-                <div class="stat"><div class="label" data-i18n="np.carbs">Carbs</div><div class="value" id="np-c">145 g</div></div>
-                <div class="stat"><div class="label" data-i18n="np.fat">Fat</div><div class="value" id="np-f">55 g</div></div>
-            </div>
-            <div class="card" style="margin-top:16px">
-                <ul class="meal-items" id="np-notes"></ul>
-            </div>
-
             <!-- Week & day selector -->
             <div class="section-title" data-i18n="np.dailyMeals">🍽️ Daily Meals</div>
             <div class="week-nav">
@@ -52,10 +41,18 @@
             </div>
             <div class="day-tabs" id="day-tabs"></div>
 
-            <div style="margin-bottom:12px">
-                <strong id="day-name" style="font-size:1.2rem"></strong>
-                <span class="muted text-sm" id="day-total"></span>
-                <div class="hint" id="eat-hint"></div>
+            <!-- Selected day against the daily targets -->
+            <div class="card day-summary">
+                <div class="ds-head">
+                    <div class="ds-title" id="day-name"></div>
+                    <div class="ds-kcal"><strong id="ds-kcal">—</strong><span id="ds-kcal-target"></span></div>
+                </div>
+                <div class="ds-macros">
+                    <div class="ds-macro dm-p"><span class="dm-name" data-i18n="np.protein">Protein</span><span class="dm-val" id="dm-p"></span><span class="m-bar"><span id="dm-p-bar"></span></span></div>
+                    <div class="ds-macro dm-c"><span class="dm-name" data-i18n="np.carbs">Carbs</span><span class="dm-val" id="dm-c"></span><span class="m-bar"><span id="dm-c-bar"></span></span></div>
+                    <div class="ds-macro dm-f"><span class="dm-name" data-i18n="np.fat">Fat</span><span class="dm-val" id="dm-f"></span><span class="m-bar"><span id="dm-f-bar"></span></span></div>
+                </div>
+                <div class="hint ds-hint" id="eat-hint"></div>
             </div>
             <div id="meals"></div>
 
@@ -63,22 +60,29 @@
             <div class="section-title" id="rot-title" data-i18n="np.rotate">🔄 Foods You Can Rotate Freely</div>
             <div class="card">
                 <div class="food-cols">
-                    <div><strong data-i18n="np.rotProtein">🥩 Protein</strong><ul id="rot-protein"></ul></div>
-                    <div><strong data-i18n="np.rotCarbs">🍚 Carbs</strong><ul id="rot-carbs"></ul></div>
-                    <div><strong data-i18n="np.rotFats">🥑 Healthy Fats</strong><ul id="rot-fats"></ul></div>
+                    <div><strong data-i18n="np.rotProtein">🥩 Protein</strong><ul class="food-chips" id="rot-protein"></ul></div>
+                    <div><strong data-i18n="np.rotCarbs">🍚 Carbs</strong><ul class="food-chips" id="rot-carbs"></ul></div>
+                    <div><strong data-i18n="np.rotFats">🥑 Healthy Fats</strong><ul class="food-chips" id="rot-fats"></ul></div>
                 </div>
             </div>
 
-            <!-- Oil swaps -->
-            <div class="section-title" data-i18n="np.oil">🫒 Olive Oil Swaps</div>
-            <div class="card">
-                <p class="muted text-sm" data-i18n="np.oilDesc">Add more olive oil without changing calories — use these 1-for-1 swaps:</p>
-                <table style="margin-top:8px"><tbody id="oil-swaps"></tbody></table>
+            <!-- Plan notes, oil swaps, tips: tap to expand -->
+            <div class="section-title" data-i18n="np.more">📖 Good to Know</div>
+            <div class="list-group disclosures">
+                <details>
+                    <summary data-i18n="np.notesTitle">ℹ️ About this plan</summary>
+                    <ul class="meal-items" id="np-notes"></ul>
+                </details>
+                <details>
+                    <summary data-i18n="np.oil">🫒 Olive Oil Swaps</summary>
+                    <p class="muted text-sm" data-i18n="np.oilDesc">Add more olive oil without changing calories — use these 1-for-1 swaps:</p>
+                    <table><tbody id="oil-swaps"></tbody></table>
+                </details>
+                <details>
+                    <summary data-i18n="np.tips">💡 Tips & Guidelines</summary>
+                    <ul class="meal-items" id="np-tips"></ul>
+                </details>
             </div>
-
-            <!-- Tips -->
-            <div class="section-title" data-i18n="np.tips">💡 Tips & Guidelines</div>
-            <div class="card"><ul class="meal-items" id="np-tips"></ul></div>
         </section>
 
         <!-- ===================== My foods tab ===================== -->

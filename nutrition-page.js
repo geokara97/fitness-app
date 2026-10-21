@@ -348,12 +348,23 @@ function renderPlan() {
     renderRotation();
 }
 
+// Daily targets; the day summary card shows the selected day against them.
+let TARGETS = { kcal: 0, p: 0, c: 0, f: 0 };
 function setTargets(kcal, p, c, f) {
-    document.getElementById('np-kcal').textContent = kcal;
-    document.getElementById('np-p').textContent = p + ' g';
-    document.getElementById('np-c').textContent = c + ' g';
-    document.getElementById('np-f').textContent = f + ' g';
+    TARGETS = { kcal: Number(kcal), p: Number(p), c: Number(c), f: Number(f) };
 }
+
+function renderDaySummary(total) {
+    const pct = (v, goal) => `scaleX(${goal ? Math.min(1, v / goal) : 0})`;
+    document.getElementById('ds-kcal').textContent = Number(total.kcal).toLocaleString(LOCALE);
+    document.getElementById('ds-kcal-target').textContent = ` / ${TARGETS.kcal.toLocaleString(LOCALE)} kcal`;
+    for (const k of ['p', 'c', 'f']) {
+        document.getElementById('dm-' + k).textContent = `${total[k]} / ${TARGETS[k]} g`;
+        document.getElementById(`dm-${k}-bar`).style.transform = pct(total[k], TARGETS[k]);
+    }
+}
+
+const MEAL_ICONS = { Breakfast: '🌅', Lunch: '🥗', Snack: '🍎', Dinner: '🌙' };
 
 function renderWeekNav() {
     const n = weeksFromNow(NUT.weekStart);
@@ -388,8 +399,7 @@ function renderDay() {
     const P = t('np.P'), C = t('np.C'), F = t('np.F');
     document.getElementById('day-name').innerHTML =
         escapeHtml(dayLabelFull(selectedDayIdx)) + (today ? ` <span class="badge green">${escapeHtml(t('np.today'))}</span>` : '');
-    document.getElementById('day-total').textContent =
-        `  ·  ~${view.total.kcal} kcal · ${P} ${view.total.p}g · ${C} ${view.total.c}g · ${F} ${view.total.f}g`;
+    renderDaySummary(view.total);
     document.getElementById('eat-hint').textContent =
         !NUT.mealsReady ? '' : today ? t('np.eatHintToday') : t('np.eatHintOther');
 
@@ -397,7 +407,8 @@ function renderDay() {
         if (meal.empty) {
             return `
                 <div class="card meal-card meal-empty">
-                    <span><strong>${t('meal.' + meal.name)}</strong> <span class="muted text-sm">— ${escapeHtml(t('np.mealRemoved'))}</span></span>
+                    <span class="meal-icon" aria-hidden="true">${MEAL_ICONS[meal.name] || '🍽️'}</span>
+                    <span class="meal-title"><strong>${t('meal.' + meal.name)}</strong><span class="meal-sub">${escapeHtml(t('np.mealRemoved'))}</span></span>
                     <button type="button" class="btn btn-ghost btn-sm" data-act="add" data-meal="${meal.name}">${escapeHtml(t('np.addMeal'))}</button>
                 </div>`;
         }
@@ -416,13 +427,17 @@ function renderDay() {
         return `
             <div class="card meal-card ${meal.eaten ? 'meal-eaten' : ''}">
                 <div class="meal-head">
-                    <h4>${t('meal.' + meal.name)}${meal.savedName ? ` <span class="saved-tag">⭐ ${escapeHtml(meal.savedName)}</span>` : ''}</h4>
-                    <div class="macro-pills">
-                        <span class="macro-pill kcal">${meal.kcal} kcal</span>
-                        <span class="macro-pill p">${P} ${meal.p}g</span>
-                        <span class="macro-pill c">${C} ${meal.c}g</span>
-                        <span class="macro-pill f">${F} ${meal.f}g</span>
-                    </div>
+                    <span class="meal-icon" aria-hidden="true">${MEAL_ICONS[meal.name] || '🍽️'}</span>
+                    <span class="meal-title">
+                        <h4>${t('meal.' + meal.name)}${meal.eaten ? ' <span class="eaten-check" aria-hidden="true">✓</span>' : ''}</h4>
+                        ${meal.savedName ? `<span class="meal-sub saved-tag">⭐ ${escapeHtml(meal.savedName)}</span>` : ''}
+                    </span>
+                    <span class="meal-kcal"><strong>${meal.kcal}</strong> kcal</span>
+                </div>
+                <div class="macro-pills">
+                    <span class="macro-pill p">${P} ${meal.p}g</span>
+                    <span class="macro-pill c">${C} ${meal.c}g</span>
+                    <span class="macro-pill f">${F} ${meal.f}g</span>
                 </div>
                 <ul class="meal-items">${meal.itemsHtml.map(it => `<li>${it}</li>`).join('')}</ul>
                 ${actions}
@@ -434,7 +449,7 @@ function renderDay() {
 function renderRotation() {
     const liked = NUT.foods.filter(f => NUT.prefs[f.food_id] === 'like');
     const fill = (id, names) => document.getElementById(id).innerHTML =
-        names.length ? names.map(x => `<li>• ${escapeHtml(x)}</li>`).join('') : '<li class="muted">—</li>';
+        names.length ? names.map(x => `<li>${escapeHtml(x)}</li>`).join('') : '<li class="muted">—</li>';
 
     if (liked.length) {
         document.getElementById('rot-title').textContent = t('np.rotateLiked');

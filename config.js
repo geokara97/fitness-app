@@ -68,6 +68,24 @@ function calcTotalBurned(weightKg, steps, workoutBurn, p) {
     return calcRestingBurn(weightKg, p) + calcStepsBurn(steps, weightKg, p) + (workoutBurn || 0);
 }
 
+// Fat-loss macros for a daily calorie target:
+// protein 2.25 g per kg bodyweight (keeps muscle in a deficit),
+// fat 25% of calories but never under 0.6 g/kg (hormonal health),
+// carbs fill the remaining calories (fuel for training).
+const MACRO_RULES = { proteinPerKg: 2.25, fatShare: 0.25, minFatPerKg: 0.6 };
+function calcMacroTargets(kcal, weightKg) {
+    kcal = Number(kcal) || 0;
+    weightKg = Number(weightKg) || 0;
+    const protein = Math.round(weightKg * MACRO_RULES.proteinPerKg);
+    let fat = Math.round(Math.max(kcal * MACRO_RULES.fatShare / 9, weightKg * MACRO_RULES.minFatPerKg));
+    let carbs = Math.round((kcal - protein * 4 - fat * 9) / 4);
+    if (carbs < 0) {                     // very low targets: protein first, then fat, no carbs
+        carbs = 0;
+        fat = Math.max(0, Math.round((kcal - protein * 4) / 9));
+    }
+    return { protein_target: protein, carbs_target: carbs, fat_target: fat };
+}
+
 // ============================================================
 // Date & formatting helpers
 // ============================================================
