@@ -479,6 +479,18 @@ td.num, th.num { text-align: right; }
 .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .chip.active::before { content: '✓ '; }
 
+/* ---- Exercise hub & library -------------------------------- */
+.back-link {
+    display: inline-block;
+    margin-bottom: 10px;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+.back-link:hover { text-decoration: underline; }
+.split-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.food-row.is-hidden .food-info { opacity: .55; }
+
 /* ---- Misc -------------------------------------------------- */
 .mb-0 { margin-bottom: 0; }
 .empty {

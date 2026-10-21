@@ -23,7 +23,7 @@ function elapsedSeconds() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    renderNav('workout');
+    renderNav('exercise');
     try {
         profile = await loadProfile();
     } catch (e) { return; }
@@ -53,29 +53,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ---- Data ---------------------------------------------------
-function splitLabel(s) {
-    return (LANG === 'el' && s.split_name_el) ? s.split_name_el : s.split_name;
-}
-
-function exerciseLabel(e) {
-    return (LANG === 'el' && e.exercise_name_el) ? e.exercise_name_el : e.exercise_name;
-}
-
 async function loadSplits() {
-    const { data, error } = await db.from('splits').select('*')
-        .order('sort_order').order('split_name');
-    if (error) { showToast(t('wo.dbUpgrade'), 'error'); return; }
-    splits = data || [];
+    try { splits = await fetchSplits(); }
+    catch (e) { showToast(t('wo.dbUpgrade'), 'error'); return; }
     renderSplitChips();
 }
 
 async function loadExercises() {
-    const { data, error } = await db.from('exercises')
-        .select('*, exercise_splits(split_id)')
-        .eq('is_active', true)
-        .order('exercise_name');
-    if (error) { showToast(t('wo.dbUpgrade'), 'error'); return; }
-    exercises = (data || []).map(e => ({ ...e, splitIds: (e.exercise_splits || []).map(x => x.split_id) }));
+    try { exercises = await fetchExercises(); }
+    catch (e) { showToast(t('wo.dbUpgrade'), 'error'); }
 }
 
 // ---- Splits (multi-select) ----------------------------------
@@ -321,9 +307,7 @@ function initNewExerciseModal() {
 function openNewExerciseModal() {
     document.getElementById('exercise-form').reset();
     // Pre-tick the splits chosen for this session.
-    document.getElementById('nx-splits').innerHTML = splits.map(s => `
-        <label><input type="checkbox" name="nx-split" value="${s.split_id}" ${selectedSplits.has(s.split_id) ? 'checked' : ''}>
-        <span>${escapeHtml(splitLabel(s))}</span></label>`).join('');
+    document.getElementById('nx-splits').innerHTML = splitChecksHtml(splits, selectedSplits, 'nx-split');
     document.getElementById('exercise-modal').classList.add('show');
     document.getElementById('nx-name-en').focus();
 }
@@ -332,25 +316,16 @@ async function saveNewExercise(e) {
     e.preventDefault();
     const nameEn = document.getElementById('nx-name-en').value.trim();
     const nameEl = document.getElementById('nx-name-el').value.trim() || null;
-    const splitIds = [...document.querySelectorAll('input[name="nx-split"]:checked')].map(c => Number(c.value));
+    const splitIds = checkedSplitIds('nx-split');
     if (!nameEn) return;
     if (!splitIds.length) { showToast(t('wo.nxNeedSplit'), 'error'); return; }
 
     const btn = document.getElementById('nx-save');
     btn.disabled = true;
-    let newId = null;
     try {
-        const { data: ex, error } = await db.from('exercises')
-            .insert([{ exercise_name: nameEn, exercise_name_el: nameEl, is_custom: true }])
-            .select().single();
-        if (error) throw error;
-        newId = ex.exercise_id;
-
-        const { error: lErr } = await db.from('exercise_splits')
-            .insert(splitIds.map(split_id => ({ exercise_id: newId, split_id })));
-        if (lErr) throw lErr;
-
-        exercises.push({ ...ex, splitIds });
+        const ex = await createExercise({ nameEn, nameEl, splitIds });
+        const newId = ex.exercise_id;
+        exercises.push(ex);
         // Make sure the new exercise is visible with the current filter.
         if (selectedSplits.size && !splitIds.some(id => selectedSplits.has(id))) {
             splitIds.forEach(id => selectedSplits.add(id));
@@ -365,8 +340,7 @@ async function saveNewExercise(e) {
         document.getElementById('exercise-modal').classList.remove('show');
         showToast(t('wo.nxAdded', { name: exerciseLabel(ex) }));
     } catch (err) {
-        if (newId) await db.from('exercises').delete().eq('exercise_id', newId);
-        showToast(err.code === '23505' ? t('wo.nxDuplicate') : t('common.errorSaving', { msg: err.message }), 'error');
+        showToast(exerciseErrorMessage(err), 'error');
     } finally {
         btn.disabled = false;
     }

@@ -6,7 +6,7 @@
 --   * an exercise can belong to several splits   (new table exercise_splits)
 --   * a workout can cover several splits          (new table workout_splits)
 --   * Greek names for splits & exercises, user-added exercises
---   * a larger exercise library (~75 exercises, 11 splits)
+--   * a larger exercise library (~75 exercises, 13 splits incl. Biceps & Triceps)
 -- Existing workouts and sets are kept. Duplicate exercises from the old
 -- one-split-per-exercise design (e.g. "Bench Press" under Push and Upper)
 -- are merged into one exercise linked to both splits.
@@ -119,7 +119,9 @@ insert into public.splits (split_name, split_name_el, sort_order) values
     ('Back',      'Πλάτη',         8),
     ('Shoulders', 'Ώμοι',          9),
     ('Arms',      'Χέρια',        10),
-    ('Core',      'Κοιλιακοί',    11)
+    ('Biceps',    'Δικέφαλοι',    11),
+    ('Triceps',   'Τρικέφαλοι',   12),
+    ('Core',      'Κοιλιακοί',    13)
 on conflict (split_name) do update
     set split_name_el = excluded.split_name_el,
         sort_order    = excluded.sort_order;
@@ -154,15 +156,16 @@ insert into exercise_seed values
 ('Face Pull',                      'Face pull σε τροχαλία',                '{Pull,Upper,Shoulders}'),
 ('Upright Row',                    'Όρθια κωπηλατική',                     '{Shoulders}'),
 -- Triceps
-('Triceps Pushdown',               'Εκτάσεις τρικεφάλων σε τροχαλία',      '{Push,Arms}'),
-('Overhead Triceps Extension',     'Εκτάσεις τρικεφάλων πάνω από το κεφάλι', '{Push,Arms}'),
-('Skull Crusher',                  'Γαλλικές πιέσεις',                     '{Push,Arms}'),
-('Close-Grip Bench Press',         'Πιέσεις πάγκου με κλειστή λαβή',       '{Push,Arms}'),
-('Triceps Dip',                    'Βυθίσεις για τρικέφαλους',             '{Push,Arms}'),
+('Triceps Pushdown',               'Εκτάσεις τρικεφάλων σε τροχαλία',      '{Push,Arms,Triceps}'),
+('Overhead Triceps Extension',     'Εκτάσεις τρικεφάλων πάνω από το κεφάλι', '{Push,Arms,Triceps}'),
+('Skull Crusher',                  'Γαλλικές πιέσεις',                     '{Push,Arms,Triceps}'),
+('Close-Grip Bench Press',         'Πιέσεις πάγκου με κλειστή λαβή',       '{Push,Arms,Triceps}'),
+('Triceps Dip',                    'Βυθίσεις για τρικέφαλους',             '{Push,Arms,Triceps}'),
+('Triceps Kickback',               'Εκτάσεις τρικεφάλων με αλτήρα (kickback)', '{Push,Arms,Triceps}'),
 -- Back
 ('Deadlift',                       'Άρσεις θανάτου',                       '{Pull,Back,Lower,Full Body}'),
 ('Pull-Up',                        'Έλξεις μονόζυγου',                     '{Pull,Upper,Back,Full Body}'),
-('Chin-Up',                        'Έλξεις με υπτιαλαβή',                  '{Pull,Back,Arms}'),
+('Chin-Up',                        'Έλξεις με υπτιαλαβή',                  '{Pull,Back,Arms,Biceps}'),
 ('Lat Pulldown',                   'Έλξεις τροχαλίας εμπρός',              '{Pull,Upper,Back}'),
 ('Barbell Row',                    'Κωπηλατική με μπάρα',                  '{Pull,Upper,Back,Full Body}'),
 ('Dumbbell Row',                   'Κωπηλατική με αλτήρα',                 '{Pull,Upper,Back}'),
@@ -173,12 +176,13 @@ insert into exercise_seed values
 ('Shrugs',                         'Ανασηκώσεις ώμων (shrugs)',            '{Pull,Back}'),
 ('Back Extension',                 'Εκτάσεις οσφύος',                      '{Pull,Back,Lower}'),
 -- Biceps
-('Barbell Curl',                   'Κάμψεις δικεφάλων με μπάρα',           '{Pull,Arms}'),
-('Dumbbell Curl',                  'Κάμψεις δικεφάλων με αλτήρες',         '{Pull,Upper,Arms}'),
-('Hammer Curl',                    'Κάμψεις σφυριού',                      '{Pull,Arms}'),
-('Preacher Curl',                  'Κάμψεις σε πάγκο Scott',               '{Pull,Arms}'),
-('Cable Curl',                     'Κάμψεις δικεφάλων σε τροχαλία',        '{Pull,Arms}'),
-('Incline Dumbbell Curl',          'Κάμψεις δικεφάλων σε κεκλιμένο πάγκο', '{Pull,Arms}'),
+('Barbell Curl',                   'Κάμψεις δικεφάλων με μπάρα',           '{Pull,Arms,Biceps}'),
+('Dumbbell Curl',                  'Κάμψεις δικεφάλων με αλτήρες',         '{Pull,Upper,Arms,Biceps}'),
+('Hammer Curl',                    'Κάμψεις σφυριού',                      '{Pull,Arms,Biceps}'),
+('Preacher Curl',                  'Κάμψεις σε πάγκο Scott',               '{Pull,Arms,Biceps}'),
+('Cable Curl',                     'Κάμψεις δικεφάλων σε τροχαλία',        '{Pull,Arms,Biceps}'),
+('Incline Dumbbell Curl',          'Κάμψεις δικεφάλων σε κεκλιμένο πάγκο', '{Pull,Arms,Biceps}'),
+('Concentration Curl',             'Κάμψεις συγκέντρωσης',                 '{Pull,Arms,Biceps}'),
 -- Legs
 ('Back Squat',                     'Καθίσματα με μπάρα',                   '{Legs,Lower,Full Body}'),
 ('Front Squat',                    'Εμπρόσθια καθίσματα',                  '{Legs,Lower}'),

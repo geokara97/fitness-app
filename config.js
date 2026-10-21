@@ -145,8 +145,7 @@ function renderNav(active) {
         { id: 'dashboard', label: t('nav.dashboard'), icon: '\u{1F3E0}', href: 'index.html' },
         { id: 'tracker', label: t('nav.tracker'), icon: '\u{1F4CA}', href: 'tracker.html' },
         { id: 'nutrition', label: t('nav.nutrition'), icon: '\u{1F957}', href: 'nutrition.html' },
-        { id: 'workout', label: t('nav.workout'), icon: '\u{1F3CB}\u{FE0F}', href: 'workout.html' },
-        { id: 'history', label: t('nav.history'), icon: '\u{1F4DC}', href: 'history.html' },
+        { id: 'exercise', label: t('nav.exercise'), icon: '\u{1F3CB}\u{FE0F}', href: 'exercise.html' },
         { id: 'settings', label: t('nav.settings'), icon: '\u{2699}\u{FE0F}', href: 'settings.html' },
     ];
     const el = document.getElementById('app-nav');

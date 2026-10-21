@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="ex.title">FitTrack — Exercise</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav id="app-nav"></nav>
+
+    <div class="container">
+        <div class="page-head">
+            <h1 data-i18n="nav.exercise">Exercise</h1>
+            <p class="muted" data-i18n="ex.subtitle">Log a workout, look back at your history, or manage your exercises.</p>
+        </div>
+
+        <div class="grid cols-4">
+            <div class="stat"><div class="label" data-i18n="ex.thisWeek">This week</div><div class="value" id="ex-week">—</div><div class="sub" data-i18n="ex.workoutsSub">workouts</div></div>
+            <div class="stat"><div class="label" data-i18n="ex.lastWorkout">Last workout</div><div class="value" id="ex-last" style="font-size:1.3rem">—</div><div class="sub" id="ex-last-sub"></div></div>
+            <div class="stat"><div class="label" data-i18n="hist.total">Total workouts</div><div class="value" id="ex-total">—</div></div>
+            <div class="stat"><div class="label" data-i18n="ex.library">Exercises in library</div><div class="value" id="ex-count">—</div></div>
+        </div>
+
+        <div class="grid cols-3" style="margin-top:24px">
+            <a href="workout.html" class="nav-card">
+                <div class="icon">🏋️</div><h3 data-i18n="ex.cardLog">Log a workout</h3>
+                <p data-i18n="ex.cardLogDesc">Pick your splits, time the session and record your sets — calories are counted live.</p>
+            </a>
+            <a href="history.html" class="nav-card">
+                <div class="icon">📜</div><h3 data-i18n="hist.h1">Workout History</h3>
+                <p data-i18n="ex.cardHistoryDesc">Every session with its splits, sets, weights, duration and calories.</p>
+            </a>
+            <a href="exercise-library.html" class="nav-card">
+                <div class="icon">📚</div><h3 data-i18n="lib.h1">Exercise Library</h3>
+                <p data-i18n="ex.cardLibraryDesc">Add your own exercises and choose which splits they belong to.</p>
+            </a>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="i18n.js"></script>
+    <script src="config.js"></script>
+    <script src="exercise-page.js"></script>
+</body>
+</html>

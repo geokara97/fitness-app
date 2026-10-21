@@ -3,7 +3,7 @@
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    renderNav('history');
+    renderNav('exercise');
     loadHistory();
 });
 
