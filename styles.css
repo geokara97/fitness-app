@@ -491,6 +491,59 @@ td.num, th.num { text-align: right; }
 .split-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
 .food-row.is-hidden .food-info { opacity: .55; }
 
+/* ---- Workout session bar (inside the sticky nav) ----------- */
+.session-bar {
+    order: 10;
+    flex-basis: calc(100% + 40px);
+    margin: 0 -20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 20px;
+    background: linear-gradient(90deg, #065f46, #047857);
+    color: #fff;
+    font-size: .9rem;
+    cursor: pointer;
+}
+.session-bar[hidden] { display: none; }
+.session-bar:hover { filter: brightness(1.08); }
+.session-bar:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+.session-bar.state-paused  { background: linear-gradient(90deg, #92400e, #b45309); }
+.session-bar.state-stopped { background: linear-gradient(90deg, #3730a3, var(--primary)); }
+.sb-dot { width: 10px; height: 10px; border-radius: 50%; background: #34d399; flex-shrink: 0; }
+.state-running .sb-dot { animation: sb-pulse 1.4s ease-in-out infinite; }
+.state-paused .sb-dot  { background: #fcd34d; }
+.state-stopped .sb-dot { background: #c7d2fe; }
+@keyframes sb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+.sb-label { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-time { font-weight: 800; font-variant-numeric: tabular-nums; margin-left: auto; }
+.sb-kcal { font-weight: 600; white-space: nowrap; }
+.sb-actions { display: flex; gap: 6px; }
+.sb-btn {
+    width: 34px; height: 30px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.35);
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    font-size: .95rem;
+    cursor: pointer;
+}
+.sb-btn:hover { background: rgba(255,255,255,.25); }
+.sb-btn[hidden] { display: none; }
+@media (max-width: 520px) {
+    .session-bar { gap: 8px; font-size: .82rem; }
+    .sb-label { flex: 1; }
+}
+
+/* ---- Workout summary --------------------------------------- */
+.timer-state.stopped { color: #a5b4fc; }
+.report-card { transition: box-shadow .3s, border-color .3s; scroll-margin-top: 90px; }
+.report-card.flash { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79,70,229,.25); }
+.stat label.label { display: block; margin: 0; }
+.cal-input-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.cal-input-row input { font-size: 1.3rem; font-weight: 800; padding: 6px 10px; }
+.cal-hint-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+
 /* ---- Misc -------------------------------------------------- */
 .mb-0 { margin-bottom: 0; }
 .empty {

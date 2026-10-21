@@ -1,5 +1,8 @@
 // ============================================================
-// Workout Session page — live timer drives calories burned
+// Workout log page — timer, splits, sets and session summary.
+// Timer state and the form draft live in localStorage
+// (workout-session.js), so a session keeps counting while you are
+// on other pages or the browser is closed, and the form comes back.
 // ============================================================
 
 let profile = null;
@@ -7,20 +10,7 @@ let exercises = [];          // each with .splitIds (from exercise_splits)
 let splits = [];
 const selectedSplits = new Set();   // split_ids chosen for this session
 let exerciseCount = 0;
-
-// ---- Timer state --------------------------------------------
-const timer = {
-    state: 'idle',          // idle | running | paused
-    accumulatedMs: 0,       // time banked from previous run segments
-    segmentStart: 0,        // performance.now() when current segment began
-    tickHandle: null,
-};
-
-function elapsedSeconds() {
-    let ms = timer.accumulatedMs;
-    if (timer.state === 'running') ms += performance.now() - timer.segmentStart;
-    return ms / 1000;
-}
+let draftTimer = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     renderNav('exercise');
@@ -28,28 +18,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         profile = await loadProfile();
     } catch (e) { return; }
 
-    document.getElementById('w-date').value = todayISO();
-
-    // Prefill bodyweight with the most recent weigh-in.
-    const { data: w } = await db.from('weight_log')
-        .select('weight').order('log_date', { ascending: false }).limit(1);
-    const bw = (w && w.length) ? Number(w[0].weight) : Number(profile.current_weight);
-    document.getElementById('w-bodyweight').value = bw;
-
     await loadSplits();
     await loadExercises();
-    addExerciseBlock();
+    await restoreOrInitForm();
 
     document.getElementById('btn-start').addEventListener('click', startTimer);
-    document.getElementById('btn-pause').addEventListener('click', pauseTimer);
+    document.getElementById('btn-pause').addEventListener('click', () => { sessionPause(); updateTimerUI(); });
+    document.getElementById('btn-stop').addEventListener('click', stopTimer);
     document.getElementById('btn-reset').addEventListener('click', resetTimer);
-    document.getElementById('btn-add-exercise').addEventListener('click', addExerciseBlock);
+    document.getElementById('btn-add-exercise').addEventListener('click', () => { addExerciseBlock(); saveDraft(); });
     document.getElementById('btn-save').addEventListener('click', saveWorkout);
+    document.getElementById('btn-discard').addEventListener('click', discardWorkout);
     document.getElementById('w-splits').addEventListener('click', onSplitChipClick);
+    document.getElementById('w-calories').addEventListener('input', onCaloriesInput);
+    document.getElementById('w-calories').addEventListener('blur', updateTimerUI);
+    document.getElementById('btn-cal-auto').addEventListener('click', () => {
+        updateSession({ manualCalories: null });
+        updateTimerUI();
+    });
+    // Any edit in the form is saved to the draft (debounced).
+    document.querySelector('.container').addEventListener('input', e => {
+        if (e.target.id !== 'w-calories') scheduleDraftSave();
+    });
     initNewExerciseModal();
-    document.getElementById('w-bodyweight').addEventListener('input', updateTimerUI);
 
+    onSessionChange(updateTimerUI);           // e.g. paused from the bar in another tab
+    setInterval(updateTimerUI, 500);
     updateTimerUI();
+
+    if (location.hash === '#report') showReport();
 });
 
 // ---- Data ---------------------------------------------------
@@ -62,6 +59,80 @@ async function loadSplits() {
 async function loadExercises() {
     try { exercises = await fetchExercises(); }
     catch (e) { showToast(t('wo.dbUpgrade'), 'error'); }
+}
+
+function currentBodyweight() {
+    return Number(document.getElementById('w-bodyweight').value) || Number(profile.current_weight);
+}
+
+// ---- Draft (form state kept in the session) -----------------
+function collectDraft() {
+    return {
+        date: document.getElementById('w-date').value,
+        bodyweight: document.getElementById('w-bodyweight').value,
+        splits: [...selectedSplits],
+        notes: document.getElementById('w-notes').value,
+        blocks: [...document.querySelectorAll('.exercise-block')].map(block => ({
+            exerciseId: block.querySelector('.ex-select').value,
+            sets: [...block.querySelectorAll('.set-row')].map(row => ({
+                reps: row.querySelector('.set-reps').value,
+                weight: row.querySelector('.set-weight').value,
+            })),
+        })),
+    };
+}
+
+function draftHasContent(d) {
+    return !!d && (d.notes || (d.splits && d.splits.length) ||
+        (d.blocks || []).some(b => b.exerciseId || b.sets.some(s => s.reps || s.weight)));
+}
+
+function saveDraft() {
+    clearTimeout(draftTimer);
+    updateSession({
+        draft: collectDraft(),
+        bodyweight: currentBodyweight(),
+        rate: Number(profile.lifting_kcal_per_kg_min),
+    });
+    updateTimerUI();
+}
+
+function scheduleDraftSave() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 300);
+}
+
+async function restoreOrInitForm() {
+    const s = readSession();
+    const d = s && s.draft;
+
+    if (d && (sessionIsActive(s) || draftHasContent(d))) {
+        document.getElementById('w-date').value = d.date || todayISO();
+        document.getElementById('w-bodyweight').value = d.bodyweight || '';
+        document.getElementById('w-notes').value = d.notes || '';
+        selectedSplits.clear();
+        (d.splits || []).forEach(id => selectedSplits.add(Number(id)));
+        renderSplitChips();
+        (d.blocks && d.blocks.length ? d.blocks : [{ exerciseId: '', sets: [] }])
+            .forEach(b => addExerciseBlock(b.exerciseId ? Number(b.exerciseId) : '', b.sets));
+        if (!document.getElementById('w-bodyweight').value) await prefillBodyweight();
+        showToast(t('wo.restored'));
+    } else {
+        document.getElementById('w-date').value = todayISO();
+        await prefillBodyweight();
+        addExerciseBlock();
+    }
+
+    // Keep the bar's calorie estimate in sync with this profile.
+    if (s) updateSession({ bodyweight: currentBodyweight(), rate: Number(profile.lifting_kcal_per_kg_min) });
+}
+
+// Prefill bodyweight with the most recent weigh-in.
+async function prefillBodyweight() {
+    const { data: w } = await db.from('weight_log')
+        .select('weight').order('log_date', { ascending: false }).limit(1);
+    document.getElementById('w-bodyweight').value =
+        (w && w.length) ? Number(w[0].weight) : Number(profile.current_weight);
 }
 
 // ---- Splits (multi-select) ----------------------------------
@@ -84,6 +155,7 @@ function onSplitChipClick(e) {
     if (selectedSplits.has(id)) selectedSplits.delete(id); else selectedSplits.add(id);
     renderSplitChips();
     refreshExerciseSelects();
+    saveDraft();
 }
 
 // Exercises in any selected split (all exercises when none is selected).
@@ -126,59 +198,84 @@ function refreshExerciseSelects() {
 
 // ---- Timer --------------------------------------------------
 function startTimer() {
-    if (timer.state === 'running') return;
-    timer.segmentStart = performance.now();
-    timer.state = 'running';
-    timer.tickHandle = setInterval(updateTimerUI, 250);
-    updateTimerUI();
+    sessionStart({ bodyweight: currentBodyweight(), rate: Number(profile.lifting_kcal_per_kg_min) });
+    saveDraft();
 }
 
-function pauseTimer() {
-    if (timer.state !== 'running') return;
-    timer.accumulatedMs += performance.now() - timer.segmentStart;
-    timer.state = 'paused';
-    clearInterval(timer.tickHandle);
+function stopTimer() {
+    if (!confirm(t('wo.confirmStop'))) return;
+    sessionStop();
     updateTimerUI();
+    showReport();
 }
 
 function resetTimer() {
-    if (timer.state !== 'idle' && !confirm(t('wo.confirmReset'))) return;
-    clearInterval(timer.tickHandle);
-    timer.state = 'idle';
-    timer.accumulatedMs = 0;
-    timer.segmentStart = 0;
+    if (sessionElapsedMs(readSession()) > 0 && !confirm(t('wo.confirmReset'))) return;
+    sessionResetTimer();
     updateTimerUI();
 }
 
-function liveBurn() {
-    const bw = Number(document.getElementById('w-bodyweight').value) || Number(profile.current_weight);
-    return calcWorkoutBurn(bw, elapsedSeconds() / 60, profile);
+function showReport() {
+    const card = document.getElementById('report');
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.add('flash');
+    setTimeout(() => card.classList.remove('flash'), 2000);
+}
+
+function countLoggedSets() {
+    return [...document.querySelectorAll('.exercise-block')]
+        .filter(b => b.querySelector('.ex-select').value)
+        .reduce((n, b) => n + [...b.querySelectorAll('.set-row')]
+            .filter(r => r.querySelector('.set-reps').value || r.querySelector('.set-weight').value).length, 0);
 }
 
 function updateTimerUI() {
-    const secs = elapsedSeconds();
-    document.getElementById('timer-display').textContent = formatClock(secs);
-    document.getElementById('timer-burn').textContent = t('wo.burn', { n: round(liveBurn()) });
+    if (!profile) return;
+    const s = readSession();
+    const state = (s && s.state) || 'idle';
+    const elapsed = sessionElapsedMs(s);
+    const clock = formatClock(elapsed / 1000);
+    const bw = currentBodyweight();
+    const rate = Number(profile.lifting_kcal_per_kg_min);
+    const auto = calcWorkoutBurn(bw, elapsed / 60000, profile);
+    const manual = s && s.manualCalories != null ? Number(s.manualCalories) : null;
 
-    const bw = Number(document.getElementById('w-bodyweight').value) || Number(profile.current_weight);
-    document.getElementById('timer-sub').textContent =
-        t('wo.sub', { bw, rate: profile.lifting_kcal_per_kg_min });
+    document.getElementById('timer-display').textContent = clock;
+    document.getElementById('timer-burn').textContent = manual != null
+        ? t('wo.burnManual', { n: round(manual) })
+        : t('wo.burn', { n: round(auto) });
+    document.getElementById('timer-sub').textContent = t('wo.sub', { bw, rate });
 
     const stateEl = document.getElementById('timer-state');
-    stateEl.className = 'timer-state ' + timer.state;
-    stateEl.textContent = t('wo.state.' + timer.state);
+    stateEl.className = 'timer-state ' + state;
+    stateEl.textContent = t('wo.state.' + state);
 
     const start = document.getElementById('btn-start');
-    const pause = document.getElementById('btn-pause');
-    const reset = document.getElementById('btn-reset');
-    start.disabled = timer.state === 'running';
-    start.textContent = timer.state === 'paused' ? t('wo.resume') : t('wo.start');
-    pause.disabled = timer.state !== 'running';
-    reset.disabled = timer.state === 'idle' && timer.accumulatedMs === 0;
+    start.disabled = state === 'running';
+    start.textContent = (state === 'paused' || state === 'stopped') ? t('wo.resume') : t('wo.start');
+    document.getElementById('btn-pause').disabled = state !== 'running';
+    document.getElementById('btn-stop').disabled = !(state === 'running' || state === 'paused');
+    document.getElementById('btn-reset').disabled = elapsed === 0;
+
+    // Session summary
+    document.getElementById('rep-duration').textContent = clock;
+    document.getElementById('rep-sets').textContent = countLoggedSets();
+    const calInput = document.getElementById('w-calories');
+    if (document.activeElement !== calInput) calInput.value = round(manual != null ? manual : auto);
+    document.getElementById('w-calories-hint').textContent = manual != null
+        ? t('wo.calManualHint', { n: round(auto) })
+        : t('wo.calAutoHint');
+    document.getElementById('btn-cal-auto').hidden = manual == null;
+}
+
+// Typed calories (e.g. from a smartwatch) override the timer estimate.
+function onCaloriesInput(e) {
+    const v = e.target.value;
+    updateSession({ manualCalories: v === '' ? null : Math.max(0, Number(v)) });
 }
 
 // ---- Exercise blocks ----------------------------------------
-function addExerciseBlock(selectedId) {
+function addExerciseBlock(selectedId, sets) {
     exerciseCount++;
     const id = exerciseCount;
     const opts = exerciseOptionsHtml(typeof selectedId === 'number' ? selectedId : '');
@@ -195,44 +292,47 @@ function addExerciseBlock(selectedId) {
             <select class="ex-select">${opts}</select>
         </div>
         <div class="sets" id="sets-${id}"></div>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="addSet(${id})">${t('wo.addSet')}</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addSet(${id}); saveDraft();">${t('wo.addSet')}</button>
     `;
     document.getElementById('exercises').appendChild(block);
-    addSet(id);
+    (Array.isArray(sets) && sets.length ? sets : [{}]).forEach(set => addSet(id, set));
 }
 
 function removeExerciseBlock(id) {
     const el = document.getElementById(`ex-${id}`);
     if (el) el.remove();
+    saveDraft();
 }
 
-function addSet(blockId) {
+function addSet(blockId, values = {}) {
     const wrap = document.getElementById(`sets-${blockId}`);
     const setNo = wrap.children.length + 1;
     const row = document.createElement('div');
     row.className = 'set-row';
     row.innerHTML = `
         <span class="set-tag">${t('wo.setN', { n: setNo })}</span>
-        <input type="number" class="set-reps" min="1" placeholder="${t('wo.repsPh')}">
-        <input type="number" class="set-weight" step="0.5" placeholder="kg">
-        <button type="button" class="icon-btn" onclick="this.closest('.set-row').remove()">×</button>
+        <input type="number" class="set-reps" min="1" placeholder="${t('wo.repsPh')}" value="${escapeHtml(values.reps || '')}">
+        <input type="number" class="set-weight" step="0.5" placeholder="kg" value="${escapeHtml(values.weight || '')}">
+        <button type="button" class="icon-btn" onclick="this.closest('.set-row').remove(); saveDraft();">×</button>
     `;
     wrap.appendChild(row);
 }
 
-// ---- Save ---------------------------------------------------
+// ---- Save / discard -----------------------------------------
 async function saveWorkout() {
-    const secs = Math.round(elapsedSeconds());
-    if (secs < 5) {
+    const s = readSession();
+    const secs = Math.round(sessionElapsedMs(s) / 1000);
+    const manual = s && s.manualCalories != null ? Number(s.manualCalories) : null;
+    if (secs < 5 && manual == null) {
         if (!confirm(t('wo.confirmZero'))) return;
     }
 
     const date = document.getElementById('w-date').value;
     if (!date) { showToast(t('wo.pickDate'), 'error'); return; }
 
-    const bodyweight = Number(document.getElementById('w-bodyweight').value) || Number(profile.current_weight);
+    const bodyweight = currentBodyweight();
     const notes = document.getElementById('w-notes').value || null;
-    const calories = round(calcWorkoutBurn(bodyweight, secs / 60, profile), 1);
+    const calories = round(manual != null ? manual : calcWorkoutBurn(bodyweight, secs / 60, profile), 1);
 
     // Collect exercises + sets.
     const exerciseRows = [];
@@ -283,6 +383,7 @@ async function saveWorkout() {
             if (eErr) throw eErr;
         }
 
+        clearSession();   // session saved — stop the timer everywhere
         showToast(t('wo.saved', { kcal: round(calories), date: formatDate(date) }));
         setTimeout(() => { window.location.href = 'history.html'; }, 1400);
     } catch (err) {
@@ -291,6 +392,13 @@ async function saveWorkout() {
         showToast(t('wo.errorSaving', { msg: err.message }), 'error');
         btn.disabled = false;
     }
+}
+
+function discardWorkout() {
+    if (!confirm(t('wo.confirmDiscard'))) return;
+    clearSession();
+    showToast(t('wo.discarded'));
+    setTimeout(() => window.location.replace('workout.html'), 600);
 }
 
 // ---- New exercise -------------------------------------------
@@ -314,6 +422,7 @@ function openNewExerciseModal() {
 
 async function saveNewExercise(e) {
     e.preventDefault();
+    e.stopPropagation();
     const nameEn = document.getElementById('nx-name-en').value.trim();
     const nameEl = document.getElementById('nx-name-el').value.trim() || null;
     const splitIds = checkedSplitIds('nx-split');
@@ -336,6 +445,7 @@ async function saveNewExercise(e) {
         // Drop it into the first empty exercise block, or a new one.
         const empty = [...document.querySelectorAll('.ex-select')].find(s => !s.value);
         if (empty) empty.value = String(newId); else addExerciseBlock(newId);
+        saveDraft();
 
         document.getElementById('exercise-modal').classList.remove('show');
         showToast(t('wo.nxAdded', { name: exerciseLabel(ex) }));
