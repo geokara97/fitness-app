@@ -76,7 +76,7 @@ a { color: inherit; text-decoration: none; }
     cursor: pointer;
     transition: background .15s;
 }
-.lang-toggle:hover { background: rgba(255,255,255,.18); }
+@media (hover: hover) and (pointer: fine) { .lang-toggle:hover { background: rgba(255,255,255,.18); } }
 .nav-link {
     padding: 10px 14px;
     border-radius: 8px;
@@ -89,7 +89,7 @@ a { color: inherit; text-decoration: none; }
     white-space: nowrap;
     transition: background .15s, color .15s;
 }
-.nav-link:hover { background: rgba(255,255,255,.08); color: #fff; }
+@media (hover: hover) and (pointer: fine) { .nav-link:hover { background: rgba(255,255,255,.08); color: #fff; } }
 .nav-link.active { background: var(--primary); color: #fff; }
 
 @media (max-width: 860px) {
@@ -191,7 +191,7 @@ a { color: inherit; text-decoration: none; }
     box-shadow: var(--shadow);
     transition: transform .15s, box-shadow .15s;
 }
-.nav-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+@media (hover: hover) and (pointer: fine) { .nav-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); } }
 .nav-card .icon { font-size: 2rem; }
 .nav-card h3 { margin: 8px 0 4px; }
 .nav-card p { color: var(--text-soft); font-size: .9rem; }
@@ -240,11 +240,11 @@ input:focus, select:focus, textarea:focus {
 }
 .btn:active { transform: scale(.98); }
 .btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:hover { background: var(--primary-dark); }
+@media (hover: hover) and (pointer: fine) { .btn-primary:hover { background: var(--primary-dark); } }
 .btn-success { background: var(--success); color: #fff; }
 .btn-danger  { background: var(--danger); color: #fff; }
 .btn-ghost   { background: var(--bg-soft); color: var(--text); border: 1px solid var(--border); }
-.btn-ghost:hover { background: #e8edf3; }
+@media (hover: hover) and (pointer: fine) { .btn-ghost:hover { background: #e8edf3; } }
 .btn-lg { padding: 14px 26px; font-size: 1.05rem; }
 .btn-sm { padding: 6px 12px; font-size: .82rem; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -256,7 +256,7 @@ input:focus, select:focus, textarea:focus {
 table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--border); }
 th { font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; color: var(--text-soft); }
-tbody tr:hover { background: var(--bg-soft); }
+@media (hover: hover) and (pointer: fine) { tbody tr:hover { background: var(--bg-soft); } }
 td.num, th.num { text-align: right; }
 
 /* ---- Badges ------------------------------------------------ */
@@ -330,9 +330,9 @@ td.num, th.num { text-align: right; }
     font-size: 1rem;
     color: var(--danger);
 }
-.icon-btn:hover { background: #fee2e2; }
+@media (hover: hover) and (pointer: fine) { .icon-btn:hover { background: #fee2e2; } }
 .icon-btn-edit { display: inline-flex; align-items: center; justify-content: center; font-size: .85rem; }
-.icon-btn-edit:hover { background: #e0e7ff; }
+@media (hover: hover) and (pointer: fine) { .icon-btn-edit:hover { background: #e0e7ff; } }
 .history-actions { display: flex; gap: 6px; }
 
 /* ---- Nutrition --------------------------------------------- */
@@ -400,7 +400,7 @@ td.num, th.num { text-align: right; }
     color: var(--text-soft);
     cursor: pointer;
 }
-.main-tab:hover { color: var(--text); }
+@media (hover: hover) and (pointer: fine) { .main-tab:hover { color: var(--text); } }
 .main-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
 .plan-banner {
@@ -444,7 +444,7 @@ td.num, th.num { text-align: right; }
     opacity: .55;
     transition: opacity .15s, filter .15s, background .15s, border-color .15s;
 }
-.pref-btn:hover { opacity: .9; filter: none; }
+@media (hover: hover) and (pointer: fine) { .pref-btn:hover { opacity: .9; filter: none; } }
 .pref-btn.active { opacity: 1; filter: none; }
 .pref-btn.like.active    { background: #dcfce7; border-color: var(--success); }
 .pref-btn.dislike.active { background: #e2e8f0; border-color: #64748b; }
@@ -467,7 +467,7 @@ td.num, th.num { text-align: right; }
     font: inherit;
     cursor: pointer;
 }
-.lookup-item:hover { border-color: var(--primary); }
+@media (hover: hover) and (pointer: fine) { .lookup-item:hover { border-color: var(--primary); } }
 .lookup-item.selected { border-color: var(--primary); background: #eef2ff; }
 .slot-checks { display: flex; gap: 16px; flex-wrap: wrap; }
 .slot-checks label { display: flex; align-items: center; gap: 6px; font-weight: 500; margin: 0; }
@@ -485,7 +485,7 @@ td.num, th.num { text-align: right; }
 }
 .meal-icon-actions { display: flex; gap: 6px; margin-left: auto; }
 .eat-btn { background: var(--bg-soft); border: 1px solid var(--border); color: var(--text); }
-.eat-btn:hover { border-color: var(--success); }
+@media (hover: hover) and (pointer: fine) { .eat-btn:hover { border-color: var(--success); } }
 .eat-btn.eaten { background: #dcfce7; border-color: var(--success); color: #15803d; }
 .saved-tag { font-size: .8rem; font-weight: 600; color: var(--primary); margin-left: 6px; }
 .meal-empty {
@@ -516,7 +516,7 @@ td.num, th.num { text-align: right; }
     text-align: left;
     cursor: pointer;
 }
-.saved-meal-head:hover { background: var(--bg-soft); }
+@media (hover: hover) and (pointer: fine) { .saved-meal-head:hover { background: var(--bg-soft); } }
 .saved-meal-head:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 .sm-name { font-weight: 700; font-size: .98rem; flex: 1 1 140px; min-width: 0; }
 .sm-rating { font-size: .78rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
@@ -543,7 +543,7 @@ td.num, th.num { text-align: right; }
     cursor: pointer;
     padding: 0;
 }
-.rate-pill:hover { border-color: var(--accent); color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { .rate-pill:hover { border-color: var(--accent); color: var(--accent); } }
 .rate-pill.filled { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
 .rate-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 @media (max-width: 420px) { .rate-pill { width: 24px; height: 26px; font-size: .74rem; } }
@@ -568,7 +568,7 @@ td.num, th.num { text-align: right; }
     border-radius: 9px;
     cursor: pointer;
 }
-.pa-day:hover { border-color: var(--primary); }
+@media (hover: hover) and (pointer: fine) { .pa-day:hover { border-color: var(--primary); } }
 .pa-day input { width: auto; margin: 0; }
 .pa-day:has(input:checked) { border-color: var(--primary); background: #eef2ff; }
 .pa-day.already .pa-day-name::after { content: ' ⭐'; }
@@ -612,7 +612,7 @@ td.num, th.num { text-align: right; }
     cursor: pointer;
     transition: background .15s, border-color .15s, color .15s;
 }
-.chip:hover { border-color: var(--primary); }
+@media (hover: hover) and (pointer: fine) { .chip:hover { border-color: var(--primary); } }
 .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .chip.active::before { content: '✓ '; }
 
@@ -624,7 +624,7 @@ td.num, th.num { text-align: right; }
     font-weight: 600;
     color: var(--primary);
 }
-.back-link:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .back-link:hover { text-decoration: underline; } }
 .split-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
 .food-row.is-hidden .food-info { opacity: .55; }
 
@@ -643,7 +643,7 @@ td.num, th.num { text-align: right; }
     cursor: pointer;
 }
 .session-bar[hidden] { display: none; }
-.session-bar:hover { filter: brightness(1.08); }
+@media (hover: hover) and (pointer: fine) { .session-bar:hover { filter: brightness(1.08); } }
 .session-bar:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
 .session-bar.state-paused  { background: linear-gradient(90deg, #92400e, #b45309); }
 .session-bar.state-stopped { background: linear-gradient(90deg, #3730a3, var(--primary)); }
@@ -665,7 +665,7 @@ td.num, th.num { text-align: right; }
     font-size: .95rem;
     cursor: pointer;
 }
-.sb-btn:hover { background: rgba(255,255,255,.25); }
+@media (hover: hover) and (pointer: fine) { .sb-btn:hover { background: rgba(255,255,255,.25); } }
 .sb-btn[hidden] { display: none; }
 @media (max-width: 520px) {
     .session-bar { gap: 8px; font-size: .82rem; }
@@ -763,6 +763,201 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .confirm-msg { font-size: .92rem; line-height: 1.45; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .confirm-actions .btn-ghost { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.3); }
-.confirm-actions .btn-ghost:hover { background: rgba(255,255,255,.2); }
+@media (hover: hover) and (pointer: fine) { .confirm-actions .btn-ghost:hover { background: rgba(255,255,255,.2); } }
 .toast.success { background: var(--success); }
 .toast.error { background: var(--danger); }
+
+
+/* ============================================================
+   Native iOS feel: springs, squircles, touch, safe areas
+   ============================================================ */
+:root {
+    /* Critically damped spring (damping 1.0, response .35s) sampled into
+       linear(), the Apple default: settles without bounce. Used through
+       CSS transitions, which retarget from the on-screen value, so they
+       stay interruptible. Velocity-carrying JS springs live in motion.js. */
+    --ease-spring: linear(0, 0.051, 0.162, 0.293, 0.421, 0.536, 0.634, 0.715, 0.781, 0.833, 0.873, 0.905, 0.929, 0.947, 0.96, 0.971, 0.978, 0.984, 0.988, 0.991, 0.994, 0.995, 0.997, 0.998, 1);
+    --dur-spring: .48s;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --tabbar-h: 54px;
+}
+
+/* ---- Touch ------------------------------------------------- */
+html {
+    -webkit-tap-highlight-color: transparent;   /* no grey flash; :active gives feedback */
+    -webkit-text-size-adjust: 100%;             /* no font inflation in landscape */
+}
+/* Fire click immediately: these never double-tap-zoom. Pinch zoom stays. */
+a, button, input, select, textarea, label, summary,
+[role="button"], [role="tab"], [role="link"] { touch-action: manipulation; }
+/* Long-press on a control must not select its label or open a callout.
+   Content text stays selectable. */
+button, .btn, [role="button"], [role="tab"], .main-tab, .chip, .rate-pill,
+.pa-day, .pref-btn, .tab-item, .session-bar, .saved-meal-head {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+/* Scrolling inside a modal must not drag the page behind it. */
+.modal-box { overscroll-behavior: contain; }
+
+/* ---- Press feedback: instant on press, quick ease-out on release --- */
+.btn, .icon-btn, .nav-card, .pref-btn, .rate-pill, .pa-day, .lookup-item,
+.saved-meal-head, .main-tab, .lang-toggle, .sb-btn, .tab-item, .chip {
+    transition: transform 200ms var(--ease-out),
+                background-color .15s, color .15s, border-color .15s, opacity .15s, box-shadow .2s;
+}
+.btn:active, .icon-btn:active, .pref-btn:active, .rate-pill:active, .pa-day:active,
+.lookup-item:active, .lang-toggle:active, .sb-btn:active, .chip:active {
+    transform: scale(.97);
+    transition-duration: 100ms;
+}
+.nav-card:active, .saved-meal-head:active {
+    transform: scale(.985);
+    transition-duration: 100ms;
+}
+.btn:disabled:active { transform: none; }
+
+/* ---- Toasts and modals: interruptible transitions, spring curve --- */
+.toast, .confirm-toast {
+    transform: translate(-50%, -50%) scale(.95);
+    transition: opacity .2s var(--ease-out), transform var(--dur-spring) var(--ease-spring);
+}
+.toast.show, .confirm-toast.show { transform: translate(-50%, -50%) scale(1); }
+
+.modal { transition: background-color .2s var(--ease-out); }
+.modal-box { transition: transform var(--dur-spring) var(--ease-spring), opacity .2s var(--ease-out); }
+@starting-style {
+    .modal.show { background-color: rgba(15,23,42,0); }
+    .modal.show .modal-box { transform: translateY(16px) scale(.97); opacity: 0; }
+}
+
+/* ---- Nutrition tabs: spring-driven underline --------------- */
+.main-tabs { position: relative; }
+.main-tab.active { border-bottom-color: transparent; }
+.tab-ink {
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--primary);
+    transform-origin: 0 0;
+    pointer-events: none;
+    will-change: transform;
+}
+
+/* ---- Continuous (squircle) corners -------------------------
+   corner-shape draws a superellipse; it needs a larger radius than
+   a circular arc to look as round. Browsers without it (Safari today)
+   keep the regular rounded corners above. */
+@supports (corner-shape: squircle) {
+    .card, .stat, .nav-card, .timer-card, .exercise-block, .modal-box,
+    .btn, .icon-btn, input, select, textarea, .pref-btn, .lookup-item,
+    .rate-pill, .pa-day, .me-totals-row, .macro-pill, .toast, .confirm-toast,
+    .lang-toggle, .nav-link, .sb-btn, .tab-item, .tab-pill {
+        corner-shape: squircle;
+    }
+    :root { --radius: 24px; }
+    .modal-box, .confirm-toast { border-radius: 28px; }
+    .btn, input, select, textarea, .pref-btn, .lookup-item, .pa-day,
+    .me-totals-row, .toast, .exercise-block { border-radius: 16px; }
+    .btn-sm, .icon-btn, .rate-pill, .lang-toggle, .nav-link, .sb-btn { border-radius: 12px; }
+    .macro-pill { border-radius: 10px; }
+}
+
+/* ---- Safe areas (viewport-fit=cover) ----------------------- */
+#app-nav {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.container {
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+
+/* ---- Bottom tab bar (phones) ------------------------------- */
+.tab-bar { display: none; }
+
+@media (max-width: 860px) {
+    .nav-toggle, .nav-links { display: none !important; }
+    .lang-toggle { margin-left: auto; }
+    .nav-brand { padding: 12px 12px 12px 0; font-size: 1.1rem; }
+
+    /* Content must clear the bar plus the home indicator. */
+    body { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
+    .container { padding-bottom: 32px; }
+
+    /* The bar paints to the bottom edge; only its content is inset. */
+    .tab-bar {
+        display: flex;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 60;
+        height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+        padding: 4px max(8px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(8px, env(safe-area-inset-left, 0px));
+        background: rgba(255,255,255,.82);
+        -webkit-backdrop-filter: saturate(180%) blur(20px);
+        backdrop-filter: saturate(180%) blur(20px);
+        border-top: .5px solid rgba(60,60,67,.29);
+    }
+    .tab-item {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        min-width: 0;
+        height: calc(var(--tabbar-h) - 8px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        border-radius: 14px;
+        color: #8e8e93;
+    }
+    .tab-item.active { color: var(--primary); }
+    .tab-item:active { transform: scale(.92); transition-duration: 100ms; }
+    .tab-icon { font-size: 1.35rem; line-height: 1; filter: grayscale(1) opacity(.6); transition: filter .2s var(--ease-out); }
+    .tab-item.active .tab-icon { filter: none; }
+    .tab-label {
+        font-size: .66rem;
+        font-weight: 600;
+        letter-spacing: .01em;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .tab-pill {
+        position: absolute;
+        left: 0;
+        top: 4px;
+        height: calc(var(--tabbar-h) - 8px);
+        border-radius: 14px;
+        background: rgba(79,70,229,.1);
+        transform-origin: 0 0;
+        pointer-events: none;
+        will-change: transform;
+    }
+}
+
+/* Stop iOS zooming the page when a field gets focus (never disable zoom). */
+@media (pointer: coarse) {
+    input, select, textarea { font-size: 16px; }
+}
+
+/* ---- Accessibility ----------------------------------------- */
+/* Reduced motion: keep the fades, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+    .toast, .confirm-toast, .toast.show, .confirm-toast.show { transform: translate(-50%, -50%); }
+    .btn:active, .icon-btn:active, .pref-btn:active, .rate-pill:active, .pa-day:active,
+    .lookup-item:active, .lang-toggle:active, .sb-btn:active, .chip:active,
+    .nav-card:active, .saved-meal-head:active, .tab-item:active { transform: none; }
+    @starting-style { .modal.show .modal-box { transform: none; } }
+}
+@media (prefers-reduced-transparency: reduce) {
+    .tab-bar { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

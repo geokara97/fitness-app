@@ -52,14 +52,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 const MAIN_TABS = ['plan', 'foods', 'meals'];
 
 function initMainTabs() {
+    let current = null;
     const show = (tab) => {
         document.querySelectorAll('.main-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
         MAIN_TABS.forEach(name => { document.getElementById('tab-' + name).hidden = tab !== name; });
         history.replaceState(null, '', tab === 'plan' ? location.pathname : '#' + tab);
+        if (current && current !== tab && typeof springIn === 'function') {
+            springIn(document.getElementById('tab-' + tab), Math.sign(MAIN_TABS.indexOf(tab) - MAIN_TABS.indexOf(current)));
+        }
+        current = tab;
     };
     document.querySelectorAll('.main-tab').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
     const fromHash = location.hash.slice(1);
     show(MAIN_TABS.includes(fromHash) ? fromHash : 'plan');
+    if (typeof attachTabIndicator === 'function') attachTabIndicator(document.querySelector('.main-tabs'), '.main-tab');
 }
 
 // ---- Dates (local, YYYY-MM-DD) ------------------------------

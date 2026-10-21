@@ -207,6 +207,8 @@ function renderNav(active) {
     el.querySelector('.lang-toggle').addEventListener('click', () => {
         setLang(LANG === 'el' ? 'en' : 'el');
     });
+    // iOS-style bottom tab bar on phones (motion.js).
+    if (typeof renderTabBar === 'function') renderTabBar(active);
     // Running workout timer bar (workout-session.js).
     if (typeof renderSessionBar === 'function') renderSessionBar(el);
 }
