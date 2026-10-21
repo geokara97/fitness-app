@@ -423,27 +423,11 @@ async function onSavedMealClick(e) {
 }
 
 // ---- Meal editor (modal) ------------------------------------
-function foodOptionsHtml(selectedId) {
-    return CATEGORY_ORDER.map(cat => {
-        const foods = NUT.foods.filter(f => f.category === cat)
-            .sort((a, b) => foodName(a).localeCompare(foodName(b), LOCALE));
-        if (!foods.length) return '';
-        return `<optgroup label="${escapeHtml(t('cat.' + cat))}">${foods.map(f => {
-            const pref = NUT.prefs[f.food_id];
-            const mark = pref === 'allergy' ? ' ⚠️' : pref === 'dislike' ? ' 👎' : pref === 'like' ? ' 👍' : '';
-            return `<option value="${f.food_id}" ${String(f.food_id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(foodName(f))}${mark}</option>`;
-        }).join('')}</optgroup>`;
-    }).join('');
-}
-
 function addEditorRow(item = {}) {
     const row = document.createElement('div');
     row.className = 'me-row';
     row.innerHTML = `
-        <select class="me-food" required>
-            <option value="">${escapeHtml(t('meals.pickFood'))}</option>
-            ${foodOptionsHtml(item.food_id)}
-        </select>
+        ${foodPickerHtml(item.food_id)}
         <div class="me-grams"><input type="number" class="me-g" min="1" max="2000" step="1" required value="${item.grams ? round(item.grams) : ''}" placeholder="g"><span class="muted">g</span></div>
         <span class="me-kcal muted text-sm"></span>
         <button type="button" class="icon-btn me-remove" title="${escapeHtml(t('common.delete'))}">×</button>`;
@@ -521,6 +505,13 @@ async function saveMealEditor(e) {
     e.preventDefault();
     if (!mealEditor) return;
     const items = editorItems();
+    const unpicked = [...document.querySelectorAll('#me-items .me-row')]
+        .find(r => r.querySelector('.me-search').value.trim() && !r.querySelector('.me-food').value);
+    if (unpicked) {
+        showToast(t('meals.pickFromList', { q: unpicked.querySelector('.me-search').value.trim() }), 'error');
+        unpicked.querySelector('.me-search').focus();
+        return;
+    }
     if (!items.length) { showToast(t('meals.needFood'), 'error'); return; }
 
     const btn = document.getElementById('me-save');
@@ -543,6 +534,7 @@ async function saveMealEditor(e) {
             const savedMealId = sameFoods ? saved.meal_id : null;
             const isNewExtra = mealEditor.newExtra;
             if (!(await savePlanMeal(slot, items, savedMealId))) return;
+            await likeFoods(items.map(it => it.food_id));
             closeMealEditor();
             // An extra meal logs something you ate: count it on that day straight away.
             if (isNewExtra && NUT.mealsReady) {
@@ -573,6 +565,7 @@ async function saveMealEditor(e) {
         const { error: iErr } = await db.from('saved_meal_items')
             .insert(items.map((it, i) => ({ meal_id: mealId, food_id: it.food_id, grams: it.grams, sort_order: i })));
         if (iErr) throw iErr;
+        await likeFoods(items.map(it => it.food_id));
 
         const linkSlot = mealEditor.linkPlanSlot;
         const wasEdit = !!mealEditor.mealId;
