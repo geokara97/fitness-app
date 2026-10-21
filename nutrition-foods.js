@@ -133,7 +133,7 @@ async function setPreference(foodId, pref) {
 
 async function deleteFood(foodId) {
     const food = NUT.foodsById[foodId];
-    if (!food || !confirm(t('foods.confirmDelete', { name: foodName(food) }))) return;
+    if (!food || !(await confirmToast(t('foods.confirmDelete', { name: foodName(food) }), { okText: t('common.delete') }))) return;
     const { error } = await db.from('foods').delete().eq('food_id', foodId);
     if (error) {
         showToast(error.code === '23503' ? t('foods.inUse') : t('common.error', { msg: error.message }), 'error');

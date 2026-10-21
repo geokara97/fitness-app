@@ -1,8 +1,9 @@
 // ============================================================
 // Nutrition page — My Meals tab, the meal editor (shared with the
-// plan) and the "I ate this today" meal log.
+// plan), "Add to plan" for any upcoming week, and the meal log
+// behind "Mark as eaten" (which also updates today's tracker calories).
 // Uses NUT, foodName(), macrosOf(), itemLabel(), savePlanMeal(),
-// linkPlanMealToSaved() and renderDay() from nutrition-page.js.
+// linkPlanMealToSaved(), renderDay() and the date helpers from nutrition-page.js.
 // ============================================================
 
 let mealEditor = null;   // { mode: 'saved' | 'plan', mealId, slot, savedMealId, linkPlanSlot }
@@ -36,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
         boxes.forEach(b => { b.checked = !allOn; });
     });
     document.getElementById('plan-add-form').addEventListener('submit', saveAddToPlan);
+    document.getElementById('pa-week').addEventListener('change', e => renderAddToPlanDays(e.target.value));
 });
 
 // ---- Rating -------------------------------------------------
@@ -74,28 +76,53 @@ async function setMealRating(m, rating) {
     }
 }
 
-// ---- Add a saved meal to days of the current plan ------------
+// ---- Add a saved meal to days of this or an upcoming week ----
+const ADD_TO_PLAN_WEEKS = 4;    // this week + the next 3
 let addToPlanMeal = null;
 
 function openAddToPlan(m) {
-    if (!NUT.plan) { showToast(t('meals.needPlan'), 'error'); return; }
+    if (!NUT.dbReady) return;
     addToPlanMeal = m;
     document.getElementById('pa-title').textContent = t('meals.addToPlanTitle', { name: m.name });
     document.getElementById('pa-hint').textContent = t('meals.addToPlanHint', { meal: t('meal.' + m.meal_slot) });
-    document.getElementById('pa-days').innerHTML = NUT.plan.days.map((d, i) => {
-        const current = d.meals.find(x => x.name === m.meal_slot);
+    const thisWeek = mondayOf(todayISO());
+    const weekSel = document.getElementById('pa-week');
+    weekSel.innerHTML = Array.from({ length: ADD_TO_PLAN_WEEKS }, (_, i) => addDays(thisWeek, i * 7))
+        .map(w => `<option value="${w}">${escapeHtml(weekLabel(w))}</option>`).join('');
+    // Start on the week being viewed, if it's one of the options.
+    weekSel.value = weeksFromNow(NUT.weekStart) >= 0 && weeksFromNow(NUT.weekStart) < ADD_TO_PLAN_WEEKS ? NUT.weekStart : thisWeek;
+    document.getElementById('plan-add-modal').classList.add('show');
+    renderAddToPlanDays(weekSel.value);
+}
+
+// Day checkboxes (with dates) and what each day has now in that week's plan.
+async function renderAddToPlanDays(weekStart) {
+    const m = addToPlanMeal;
+    const box = document.getElementById('pa-days');
+    box.innerHTML = `<p class="muted text-sm">${escapeHtml(t('foods.searching'))}</p>`;
+    let plan = null;
+    try {
+        const row = NUT.plansByWeek[weekStart];
+        plan = weekStart === NUT.weekStart ? NUT.plan : row ? await loadPlanItems(row) : null;
+    } catch (err) { /* treat as no plan */ }
+    if (!m || document.getElementById('pa-week').value !== weekStart) return;   // changed meanwhile
+
+    const today = todayISO();
+    box.innerHTML = DAY_NAMES.map((day, i) => {
+        const iso = dateOfDay(i, weekStart);
+        const past = iso < today;
+        const current = plan && plan.days[i].meals.find(x => x.name === m.meal_slot);
         const saved = current && current.savedMealId && NUT.savedMeals.find(s => s.meal_id === current.savedMealId);
         const already = current && current.savedMealId === m.meal_id;
-        const now = !current ? t('meals.slotEmpty')
+        const now = !plan ? t('meals.noPlanYet') : !current ? t('meals.slotEmpty')
             : `${round(macrosOf(current.items).kcal)} kcal${saved ? ' · ⭐ ' + saved.name : ''}`;
         return `
-            <label class="pa-day ${already ? 'already' : ''}">
-                <input type="checkbox" name="pa-day" value="${i}">
-                <span class="pa-day-name">${escapeHtml(t('day.' + d.day))}</span>
-                <span class="muted text-sm">${escapeHtml(already ? t('meals.alreadyThere') : t('meals.currently', { what: now }))}</span>
+            <label class="pa-day ${already ? 'already' : ''} ${past ? 'past' : ''}">
+                <input type="checkbox" name="pa-day" value="${i}" ${past ? 'disabled' : ''}>
+                <span class="pa-day-name">${escapeHtml(dayLabelFull(i, weekStart))}</span>
+                <span class="muted text-sm">${escapeHtml(past ? t('meals.dayPast') : already ? t('meals.alreadyThere') : t('meals.currently', { what: now }))}</span>
             </label>`;
     }).join('');
-    document.getElementById('plan-add-modal').classList.add('show');
 }
 
 function closeAddToPlan() {
@@ -107,6 +134,7 @@ async function saveAddToPlan(e) {
     e.preventDefault();
     const m = addToPlanMeal;
     if (!m) return;
+    const weekStart = document.getElementById('pa-week').value;
     const days = [...document.querySelectorAll('input[name="pa-day"]:checked')].map(c => Number(c.value));
     if (!days.length) { showToast(t('meals.pickDays'), 'error'); return; }
     const items = m.items.filter(it => NUT.foodsById[it.food_id])
@@ -116,13 +144,18 @@ async function saveAddToPlan(e) {
     const btn = document.getElementById('pa-save');
     btn.disabled = true;
     let ok = 0;
-    for (const dayIdx of days) {
-        if (await savePlanMeal(m.meal_slot, items, m.meal_id, { dayIdx, quiet: true })) ok++;
+    try {
+        const planRow = await getOrCreatePlanForWeek(weekStart);   // a week without a plan gets one
+        for (const dayIdx of days) {
+            if (await savePlanMeal(m.meal_slot, items, m.meal_id, { dayIdx, planRow, quiet: true })) ok++;
+        }
+    } catch (err) {
+        showToast(planSaveError(err), 'error');
     }
     btn.disabled = false;
     closeAddToPlan();
-    await reloadPlan();
-    if (ok) showToast(t('meals.addedToDays', { name: m.name, n: ok }));
+    if (weekStart === NUT.weekStart) await reloadPlan();
+    if (ok) showToast(t('meals.addedToDays', { name: m.name, n: ok, week: weekLabel(weekStart) }));
 }
 
 // ---- Helpers ------------------------------------------------
@@ -145,9 +178,23 @@ function macroPillsHtml(mm) {
 }
 
 // ---- Meal log -----------------------------------------------
-function findTodayLog(slot, signature) {
+// One "eaten" entry per meal slot per day (breakfast, lunch, snack, dinner).
+function findTodayLog(slot) {
     const today = todayISO();
-    return NUT.mealLog.find(l => l.eaten_on === today && l.meal === slot && l.signature === signature);
+    return NUT.mealLog.find(l => l.eaten_on === today && l.meal === slot);
+}
+
+// Add (or subtract) calories to a day's "Calories eaten" in the Daily Tracker.
+// Adjusting instead of overwriting keeps any manual edits made in the tracker.
+async function adjustCaloriesEaten(dateIso, delta) {
+    const { data: row, error } = await db.from('daily_log')
+        .select('calories_eaten').eq('log_date', dateIso).maybeSingle();
+    if (error) throw error;
+    const next = Math.max(0, Math.round(Number(row && row.calories_eaten || 0) + delta));
+    const { error: uErr } = await db.from('daily_log')
+        .upsert({ log_date: dateIso, calories_eaten: next }, { onConflict: 'log_date' });
+    if (uErr) throw uErr;
+    return next;
 }
 
 // Times eaten (any slot) in the favourites window.
@@ -156,18 +203,27 @@ function timesEaten(signature) {
     return NUT.mealLog.filter(l => l.signature === signature && l.eaten_on >= since).length;
 }
 
-// Mark a meal as eaten today, or undo it if it already is.
-async function toggleEatenToday({ slot, savedMealId, name, items }) {
-    const signature = mealSignature(savedMealId, items.map(it => it.food_id));
-    const existing = findTodayLog(slot, signature);
+// Mark today's meal as eaten (adds its calories to today's tracker), or undo it.
+// macros: totals for meals without food data (the built-in default plan).
+async function toggleEatenToday({ slot, savedMealId, name, items, macros = null }) {
+    const today = todayISO();
+    const existing = findTodayLog(slot);
     if (existing) {
         const { error } = await db.from('meal_log').delete().eq('log_id', existing.log_id);
         if (error) { showToast(t('common.error', { msg: error.message }), 'error'); return; }
         NUT.mealLog = NUT.mealLog.filter(l => l.log_id !== existing.log_id);
-        showToast(t('meals.unlogged'));
+        const kcal = Number(existing.kcal) || 0;
+        try {
+            const total = await adjustCaloriesEaten(today, -kcal);
+            showToast(t('meals.unmarked', { meal: t('meal.' + slot), kcal: round(kcal), total }));
+        } catch (err) {
+            showToast(t('meals.trackerError', { msg: err.message }), 'error');
+        }
         return;
     }
-    const mm = macrosOf(withFoods(items));
+
+    const signature = items.length ? mealSignature(savedMealId, items.map(it => it.food_id)) : `d:${slot}`;
+    const mm = macros || macrosOf(withFoods(items));
     const row = {
         eaten_on: todayISO(), meal: slot, saved_meal_id: savedMealId || null, signature, name: name || null,
         items: items.map(it => {
@@ -176,10 +232,16 @@ async function toggleEatenToday({ slot, savedMealId, name, items }) {
         }),
         kcal: round(mm.kcal, 1), protein: round(mm.p, 1), carbs: round(mm.c, 1), fat: round(mm.f, 1),
     };
+    row.eaten_on = today;
     const { data, error } = await db.from('meal_log').insert([row]).select().single();
     if (error) { showToast(t('common.errorSaving', { msg: error.message }), 'error'); return; }
     NUT.mealLog.unshift(data);
-    showToast(t('meals.logged', { meal: t('meal.' + slot) }));
+    try {
+        const total = await adjustCaloriesEaten(today, Number(row.kcal) || 0);
+        showToast(t('meals.marked', { meal: t('meal.' + slot), kcal: round(row.kcal), total }));
+    } catch (err) {
+        showToast(t('meals.trackerError', { msg: err.message }), 'error');
+    }
 }
 
 // ---- My Meals tab -------------------------------------------
@@ -207,9 +269,7 @@ function renderMealsTab() {
 
 function savedMealCard(m) {
     const items = withFoods(m.items);
-    const sig = savedMealSignature(m);
-    const eaten = !!findTodayLog(m.meal_slot, sig);
-    const count = timesEaten(sig);
+    const count = timesEaten(savedMealSignature(m));
     return `
         <div class="card meal-card">
             <div class="meal-head">
@@ -219,8 +279,6 @@ function savedMealCard(m) {
             <ul class="meal-items">${items.map(it => `<li>${itemLabel(it)}</li>`).join('') || `<li class="muted">—</li>`}</ul>
             ${ratingRowHtml(m)}
             <div class="meal-actions">
-                <button type="button" class="btn btn-sm eat-btn ${eaten ? 'eaten' : ''}" data-act="eat" data-id="${m.meal_id}"
-                        aria-pressed="${eaten}">${escapeHtml(t(eaten ? 'meals.eatenToday' : 'meals.ateToday'))}</button>
                 <span class="muted text-sm">${escapeHtml(count ? t('meals.timesEaten', { n: count }) : t('meals.neverEaten'))}</span>
                 <span class="meal-icon-actions">
                     <button type="button" class="btn btn-ghost btn-sm" data-act="plan" data-id="${m.meal_id}">${escapeHtml(t('meals.addToPlan'))}</button>
@@ -237,11 +295,6 @@ async function onSavedMealClick(e) {
     const m = NUT.savedMeals.find(x => x.meal_id === Number(btn.dataset.id));
     if (!m) return;
 
-    if (btn.dataset.act === 'eat') {
-        await toggleEatenToday({ slot: m.meal_slot, savedMealId: m.meal_id, name: m.name, items: m.items });
-        renderMealsTab();
-        if (NUT.plan) renderDay();
-    }
     if (btn.dataset.act === 'rate') await setMealRating(m, Number(btn.dataset.rating));
     if (btn.dataset.act === 'plan') openAddToPlan(m);
     if (btn.dataset.act === 'edit') {
@@ -306,7 +359,7 @@ function openMealEditor(opts) {
     const isSaved = opts.mode === 'saved';
     document.getElementById('meal-modal-title').textContent = isSaved
         ? t(opts.mealId ? 'meals.editTitle' : 'meals.newTitle')
-        : t('np.editPlanMealTitle', { meal: t('meal.' + opts.slot), day: t('day.' + planDay().day) });
+        : t('np.editPlanMealTitle', { meal: t('meal.' + opts.slot), day: dayLabelFull(selectedDayIdx) });
 
     document.getElementById('me-saved-fields').hidden = !isSaved;
     document.getElementById('me-name').required = isSaved;

@@ -347,6 +347,12 @@ td.num, th.num { text-align: right; }
     font-size: .88rem;
 }
 .day-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.day-tab.today:not(.active) { border-color: var(--success); color: #15803d; }
+.day-tab strong { font-weight: 800; }
+.week-nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.week-nav #week-label { min-width: 0; }
+.meal-card.meal-eaten { border-left-color: var(--success); }
+.pa-day.past { opacity: .5; cursor: not-allowed; }
 .meal-card { border-left: 4px solid var(--primary); }
 .meal-head {
     display: flex;
@@ -518,7 +524,7 @@ td.num, th.num { text-align: right; }
 .pa-days { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .pa-day {
     display: grid;
-    grid-template-columns: 20px 100px 1fr;
+    grid-template-columns: 20px minmax(130px, auto) 1fr;
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
@@ -680,42 +686,44 @@ hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .modal-close { float: right; cursor: pointer; font-size: 1.4rem; color: var(--text-soft); }
 
 /* ---- Toast ------------------------------------------------- */
+/* Toasts appear in the middle of the screen */
 .toast {
     position: fixed;
-    bottom: 24px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%) translateY(20px);
+    transform: translate(-50%, -50%) scale(.94);
     background: var(--text);
     color: #fff;
-    padding: 12px 22px;
-    border-radius: 10px;
-    box-shadow: var(--shadow-lg);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .25s, transform .25s;
-    z-index: 200;
-    font-size: .9rem;
-    max-width: 90vw;
-}
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-/* In-app confirmation (confirmToast) — same spot & motion as the toast */
-.confirm-toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    width: min(440px, calc(100vw - 32px));
-    background: var(--text);
-    color: #fff;
-    padding: 16px 18px;
+    padding: 14px 24px;
     border-radius: 12px;
     box-shadow: var(--shadow-lg);
     opacity: 0;
-    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    z-index: 200;
+    font-size: .95rem;
+    text-align: center;
+    max-width: min(420px, calc(100vw - 32px));
+}
+.toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+/* In-app confirmation (confirmToast) — centred, with a dimmed backdrop */
+.confirm-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(.94);
+    width: min(440px, calc(100vw - 32px));
+    background: var(--text);
+    color: #fff;
+    padding: 18px 20px;
+    border-radius: 14px;
+    box-shadow: 0 0 0 100vmax rgba(15,23,42,.35), var(--shadow-lg);   /* backdrop */
+    opacity: 0;
+    transition: opacity .2s, transform .2s;
     z-index: 210;
 }
-.confirm-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.confirm-toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .confirm-msg { font-size: .92rem; line-height: 1.45; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .confirm-actions .btn-ghost { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.3); }

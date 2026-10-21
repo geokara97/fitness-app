@@ -39,16 +39,20 @@
                 <ul class="meal-items" id="np-notes"></ul>
             </div>
 
-            <!-- Day selector -->
+            <!-- Week & day selector -->
             <div class="section-title" data-i18n="np.dailyMeals">🍽️ Daily Meals</div>
+            <div class="week-nav">
+                <button type="button" class="btn btn-ghost btn-sm" id="week-prev" aria-label="Previous week" data-i18n-title="np.prevWeek">◀</button>
+                <strong id="week-label"></strong>
+                <button type="button" class="btn btn-ghost btn-sm" id="week-next" aria-label="Next week" data-i18n-title="np.nextWeek">▶</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="week-today" data-i18n="np.goToday">Today</button>
+            </div>
             <div class="day-tabs" id="day-tabs"></div>
 
-            <div class="flex-between" style="margin-bottom:12px">
-                <div>
-                    <strong id="day-name" style="font-size:1.2rem"></strong>
-                    <span class="muted text-sm" id="day-total"></span>
-                </div>
-                <button class="btn btn-success btn-sm" id="log-day-btn" data-i18n="np.logBtnDefault">✓ Log this day's calories to today</button>
+            <div style="margin-bottom:12px">
+                <strong id="day-name" style="font-size:1.2rem"></strong>
+                <span class="muted text-sm" id="day-total"></span>
+                <div class="hint" id="eat-hint"></div>
             </div>
             <div id="meals"></div>
 
@@ -164,6 +168,10 @@
             <h3 id="pa-title"></h3>
             <p class="muted text-sm" id="pa-hint" style="margin:-8px 0 12px"></p>
             <form id="plan-add-form">
+                <div class="form-group">
+                    <label for="pa-week" data-i18n="meals.week">Week</label>
+                    <select id="pa-week"></select>
+                </div>
                 <div id="pa-days" class="pa-days"></div>
                 <button type="button" class="btn btn-ghost btn-sm" id="pa-all" data-i18n="meals.selectAll">Select all / none</button>
                 <button type="submit" class="btn btn-primary btn-block" id="pa-save" style="margin-top:12px" data-i18n="meals.addToSelected">Add to selected days</button>

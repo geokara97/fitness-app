@@ -282,8 +282,9 @@ async function stopTimer() {
     showReport();
 }
 
-function resetTimer() {
-    if (sessionElapsedMs(readSession()) > 0 && !confirm(t('wo.confirmReset'))) return;
+async function resetTimer() {
+    if (sessionElapsedMs(readSession()) > 0 &&
+        !(await confirmToast(t('wo.confirmReset'), { okText: t('wo.resetYes') }))) return;
     sessionResetTimer();
     updateTimerUI();
 }
@@ -412,7 +413,7 @@ async function saveWorkout() {
     const secs = Math.round(currentElapsedMs() / 1000);
     const manual = currentManualCalories();
     if (!EDIT_ID && secs < 5 && manual == null) {
-        if (!confirm(t('wo.confirmZero'))) return;
+        if (!(await confirmToast(t('wo.confirmZero'), { okText: t('wo.saveAnyway') }))) return;
     }
 
     const date = document.getElementById('w-date').value;
@@ -521,9 +522,9 @@ async function updateSavedWorkout({ date, secs, bodyweight, calories, notes, exe
     }
 }
 
-function discardWorkout() {
+async function discardWorkout() {
     if (EDIT_ID) { window.location.href = 'history.html'; return; }   // cancel editing
-    if (!confirm(t('wo.confirmDiscard'))) return;
+    if (!(await confirmToast(t('wo.confirmDiscard'), { okText: t('wo.discardYes') }))) return;
     clearSession();
     showToast(t('wo.discarded'));
     setTimeout(() => window.location.replace('workout.html'), 600);

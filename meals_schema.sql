@@ -6,6 +6,7 @@
 --   meal_log                       : meals you marked as eaten — the plan
 --                                    generator favours the ones you eat most
 --   meal_plan_items.saved_meal_id  : which plan meals came from a saved meal
+--   meal_plans.week_start          : plans belong to calendar weeks (Monday)
 -- ============================================================
 
 begin;
@@ -77,6 +78,35 @@ create index if not exists meal_log_signature_idx on public.meal_log (signature)
 -- ------------------------------------------------------------
 alter table public.meal_plan_items
     add column if not exists saved_meal_id bigint references public.saved_meals (meal_id) on delete set null;
+
+
+-- ------------------------------------------------------------
+-- Plans per calendar week: one plan per week, starting on Monday.
+-- meal_plan_items.day_of_week (1 = Monday) + week_start give the real date.
+-- Existing plans move to the week they were created in (newest wins).
+-- ------------------------------------------------------------
+alter table public.meal_plans add column if not exists week_start date;
+
+delete from public.meal_plans p
+using public.meal_plans q
+where p.week_start is null and q.week_start is null
+  and date_trunc('week', p.created_at) = date_trunc('week', q.created_at)
+  and p.plan_id < q.plan_id;
+
+update public.meal_plans
+set week_start = date_trunc('week', created_at)::date      -- ISO weeks start on Monday
+where week_start is null;
+
+alter table public.meal_plans alter column week_start set not null;
+create unique index if not exists meal_plans_week_unique on public.meal_plans (week_start);
+
+do $$
+begin
+    if not exists (select 1 from pg_constraint where conname = 'meal_plans_week_is_monday') then
+        alter table public.meal_plans
+            add constraint meal_plans_week_is_monday check (extract(isodow from week_start) = 1);
+    end if;
+end $$;
 
 
 -- ------------------------------------------------------------

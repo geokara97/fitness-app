@@ -105,7 +105,7 @@ function renderWorkout(w) {
 }
 
 async function deleteWorkout(id) {
-    if (!confirm(t('hist.confirmDelete'))) return;
+    if (!(await confirmToast(t('hist.confirmDelete'), { okText: t('common.delete') }))) return;
     const { error } = await db.from('workouts').delete().eq('workout_id', id);
     if (error) { showToast(t('common.error', { msg: error.message }), 'error'); return; }
     showToast(t('hist.deleted'));

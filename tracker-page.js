@@ -265,7 +265,7 @@ async function refreshHistory() {
 }
 
 async function deleteDay(date) {
-    if (!confirm(t('trk.confirmDelete', { date }))) return;
+    if (!(await confirmToast(t('trk.confirmDelete', { date: formatDate(date) }), { okText: t('common.delete') }))) return;
     const { error } = await db.from('daily_log').delete().eq('log_date', date);
     if (error) { showToast(t('common.error', { msg: error.message }), 'error'); return; }
     showToast(t('trk.deleted'));

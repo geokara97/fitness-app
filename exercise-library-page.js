@@ -144,12 +144,12 @@ async function setActive(ex, active) {
 }
 
 async function deleteExercise(ex) {
-    if (!confirm(t('lib.confirmDelete', { name: exerciseLabel(ex) }))) return;
+    if (!(await confirmToast(t('lib.confirmDelete', { name: exerciseLabel(ex) }), { okText: t('common.delete') }))) return;
     const { error } = await db.from('exercises').delete().eq('exercise_id', ex.exercise_id);
     if (error) {
         // Used in logged workouts: offer to hide it instead.
         if (error.code === '23503') {
-            if (ex.is_active && confirm(t('lib.inUseHide', { name: exerciseLabel(ex) }))) await setActive(ex, false);
+            if (ex.is_active && await confirmToast(t('lib.inUseHide', { name: exerciseLabel(ex) }), { okText: t('lib.hideBtn') })) await setActive(ex, false);
             else if (!ex.is_active) showToast(t('lib.inUse'), 'error');
             return;
         }

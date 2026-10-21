@@ -1,20 +1,26 @@
 // ============================================================
 // Nutrition page — Meal Plan tab
-// Shows the latest generated plan from the DB, or the built-in
-// default plan (nutrition-data.js) until one is generated.
+// Plans belong to calendar weeks (meal_plans.week_start = Monday).
+// A week without a generated plan shows the built-in default plan
+// (nutrition-data.js). Meals can be marked as eaten on today only;
+// that adds their calories to today's Daily Tracker automatically.
 // ============================================================
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const MEAL_ORDER = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
+const WEEKS_BACK = 12;    // how far the week arrows go
+const WEEKS_AHEAD = 8;
 
 // Shared with nutrition-foods.js and nutrition-meals.js
 const NUT = {
     foods: [],            // rows from `foods`
     foodsById: {},
     prefs: {},            // { food_id: 'like' | 'dislike' | 'allergy' }
-    plan: null,           // { meta, days: [{ day, meals: [{ name, savedMealId, items: [{ food, grams }] }] }] }
+    plansByWeek: {},      // { 'YYYY-MM-DD' (Monday): meal_plans row }
+    weekStart: null,      // Monday of the week on screen
+    plan: null,           // plan of that week: { meta, days: [{ day, meals: [{ name, savedMealId, items: [{ food, grams }] }] }] }
     dbReady: false,       // nutrition tables exist and loaded
-    savedMeals: [],       // [{ meal_id, name, meal_slot, items: [{ food_id, grams, sort_order }] }]
+    savedMeals: [],       // [{ meal_id, name, meal_slot, rating, items: [{ food_id, grams, sort_order }] }]
     mealLog: [],          // meal_log rows from the last 5 weeks
     mealsReady: false,    // meals_schema.sql has been run
 };
@@ -25,15 +31,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderNav('nutrition');
     initMainTabs();
 
-    // Default to today's weekday.
-    const idx = DAY_NAMES.indexOf(dayName(todayISO()));
-    selectedDayIdx = idx >= 0 ? idx : 0;
+    NUT.weekStart = mondayOf(todayISO());
+    selectedDayIdx = dayIndexOf(todayISO());
 
     renderPlan();      // show the default plan straight away
     renderTips();
-    document.getElementById('log-day-btn').addEventListener('click', logDayCalories);
     document.getElementById('btn-generate').addEventListener('click', generatePlan);
     document.getElementById('meals').addEventListener('click', onPlanMealClick);
+    document.getElementById('week-prev').addEventListener('click', () => changeWeek(-1));
+    document.getElementById('week-next').addEventListener('click', () => changeWeek(1));
+    document.getElementById('week-today').addEventListener('click', goToToday);
 
     await loadNutritionData();
     renderPlan();
@@ -55,6 +62,57 @@ function initMainTabs() {
     show(MAIN_TABS.includes(fromHash) ? fromHash : 'plan');
 }
 
+// ---- Dates (local, YYYY-MM-DD) ------------------------------
+function isoOf(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function addDays(iso, n) {
+    const d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return isoOf(d);
+}
+
+function dayIndexOf(iso) {                 // 0 = Monday … 6 = Sunday
+    return (new Date(iso + 'T00:00:00').getDay() + 6) % 7;
+}
+
+function mondayOf(iso) {
+    return addDays(iso, -dayIndexOf(iso));
+}
+
+function dateOfDay(dayIdx, weekStart = NUT.weekStart) {
+    return addDays(weekStart, dayIdx);
+}
+
+function weeksFromNow(weekStart) {
+    const ms = new Date(weekStart + 'T00:00:00') - new Date(mondayOf(todayISO()) + 'T00:00:00');
+    return Math.round(ms / (7 * 86400000));
+}
+
+// "This week · 20–26 Oct"
+function weekLabel(weekStart) {
+    const n = weeksFromNow(weekStart);
+    const rel = n === 0 ? t('np.weekThis') : n === 1 ? t('np.weekNext') : n === -1 ? t('np.weekLast')
+        : n > 1 ? t('np.weekIn', { n }) : t('np.weekAgo', { n: -n });
+    const start = new Date(weekStart + 'T00:00:00');
+    const end = new Date(addDays(weekStart, 6) + 'T00:00:00');
+    const sameMonth = start.getMonth() === end.getMonth();
+    const from = start.toLocaleDateString(LOCALE, sameMonth ? { day: 'numeric' } : { day: 'numeric', month: 'short' });
+    const to = end.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' });
+    return `${rel} · ${from}–${to}`;
+}
+
+// "Wednesday 21 October"
+function dayLabelFull(dayIdx, weekStart = NUT.weekStart) {
+    const d = new Date(dateOfDay(dayIdx, weekStart) + 'T00:00:00');
+    return `${t('day.' + DAY_NAMES[dayIdx])} ${d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' })}`;
+}
+
+function isTodaySelected() {
+    return dateOfDay(selectedDayIdx) === todayISO();
+}
+
 // ---- Data ---------------------------------------------------
 function foodName(food) {
     return (LANG === 'el' && food.name_el) ? food.name_el : food.name_en;
@@ -62,21 +120,27 @@ function foodName(food) {
 
 async function loadNutritionData() {
     try {
-        const [foodsRes, prefsRes, planRes] = await Promise.all([
+        const [foodsRes, prefsRes, plansRes] = await Promise.all([
             db.from('foods').select('*').order('name_en'),
             db.from('food_preferences').select('food_id, preference'),
-            db.from('meal_plans').select('*').order('plan_id', { ascending: false }).limit(1),
+            db.from('meal_plans').select('*').order('plan_id', { ascending: false }),
         ]);
-        for (const r of [foodsRes, prefsRes, planRes]) if (r.error) throw r.error;
+        for (const r of [foodsRes, prefsRes, plansRes]) if (r.error) throw r.error;
 
         NUT.foods = foodsRes.data || [];
         NUT.foodsById = Object.fromEntries(NUT.foods.map(f => [f.food_id, f]));
         NUT.prefs = Object.fromEntries((prefsRes.data || []).map(p => [p.food_id, p.preference]));
         NUT.dbReady = true;
 
+        // Before meals_schema.sql adds week_start, a plan counts for the week it was created in.
+        NUT.plansByWeek = {};
+        (plansRes.data || []).forEach(p => {
+            const week = p.week_start || mondayOf(isoOf(new Date(p.created_at)));
+            if (!NUT.plansByWeek[week]) NUT.plansByWeek[week] = p;   // newest first
+        });
+
         await loadMealsData();
-        const planRow = (planRes.data || [])[0];
-        NUT.plan = planRow ? await loadPlanItems(planRow) : null;
+        await loadWeek(NUT.weekStart);
     } catch (err) {
         console.error('Nutrition tables not available:', err.message);
         NUT.dbReady = false;
@@ -125,10 +189,49 @@ async function loadPlanItems(planRow) {
     return { meta: planRow, days };
 }
 
+async function loadWeek(weekStart) {
+    NUT.weekStart = weekStart;
+    const row = NUT.plansByWeek[weekStart];
+    NUT.plan = row ? await loadPlanItems(row) : null;
+}
+
 async function reloadPlan() {
-    if (!NUT.plan) return;
-    NUT.plan = await loadPlanItems(NUT.plan.meta);
+    await loadWeek(NUT.weekStart);
     renderPlan();
+}
+
+async function changeWeek(delta) {
+    const next = addDays(NUT.weekStart, delta * 7);
+    const n = weeksFromNow(next);
+    if (n < -WEEKS_BACK || n > WEEKS_AHEAD) return;
+    try { await loadWeek(next); } catch (err) { showToast(t('common.error', { msg: err.message }), 'error'); }
+    renderPlan();
+}
+
+async function goToToday() {
+    selectedDayIdx = dayIndexOf(todayISO());
+    await loadWeek(mondayOf(todayISO()));
+    renderPlan();
+}
+
+// The plan row for a week, creating an empty one (current targets) if needed.
+async function getOrCreatePlanForWeek(weekStart) {
+    if (NUT.plansByWeek[weekStart]) return NUT.plansByWeek[weekStart];
+    clearProfileCache();
+    const p = await loadProfile();
+    const { data, error } = await db.from('meal_plans').insert([{
+        week_start: weekStart,
+        kcal_target: Number(p.daily_calorie_target), protein_target: Number(p.protein_target),
+        carbs_target: Number(p.carbs_target), fat_target: Number(p.fat_target),
+    }]).select().single();
+    if (error) throw error;
+    NUT.plansByWeek[weekStart] = data;
+    return data;
+}
+
+// Friendly message when week_start doesn't exist yet (meals_schema.sql not re-run).
+function planSaveError(err) {
+    return /week_start/i.test(err.message || '') ? t('np.weekDbMissing') : t('common.error', { msg: err.message });
 }
 
 // ---- Macro maths --------------------------------------------
@@ -153,8 +256,12 @@ function itemLabel({ food, grams }) {
     return `${round(grams)} g ${name}`;
 }
 
-// Normalised view of the selected day: { label, total, meals: [{ name, kcal, p, c, f, itemsHtml[] }] }
+// Normalised view of the selected day:
+// { day, editable, total, meals: [{ name, kcal, p, c, f, itemsHtml[], savedName, eaten, empty }] }
 function currentDayView() {
+    const today = isTodaySelected();
+    const eatenNow = slot => today && NUT.mealsReady && !!findTodayLog(slot);
+
     if (NUT.plan) {
         const day = NUT.plan.days[selectedDayIdx];
         // Every slot is listed; a deleted meal shows as an empty placeholder.
@@ -164,8 +271,7 @@ function currentDayView() {
             const mm = macrosOf(m.items);
             const saved = m.savedMealId && NUT.savedMeals.find(s => s.meal_id === m.savedMealId);
             return { name: slot, kcal: round(mm.kcal), p: round(mm.p), c: round(mm.c), f: round(mm.f),
-                     itemsHtml: m.items.map(itemLabel), savedName: saved ? saved.name : null,
-                     eaten: NUT.mealsReady && !!findTodayLog(slot, planMealSignature(m)) };
+                     itemsHtml: m.items.map(itemLabel), savedName: saved ? saved.name : null, eaten: eatenNow(slot) };
         });
         const tot = macrosOf(day.meals.flatMap(m => m.items));
         return { day: day.day, editable: true, total: { kcal: round(tot.kcal), p: round(tot.p), c: round(tot.c), f: round(tot.f) }, meals };
@@ -173,8 +279,9 @@ function currentDayView() {
     const day = NUTRITION_PLAN.days.find(d => d.day === DAY_NAMES[selectedDayIdx]) || NUTRITION_PLAN.days[0];
     return {
         day: day.day,
+        editable: false,
         total: day.total,
-        meals: day.meals.map(m => ({ ...m, itemsHtml: m.items.map(it => escapeHtml(planText(it))) })),
+        meals: day.meals.map(m => ({ ...m, itemsHtml: m.items.map(it => escapeHtml(planText(it))), eaten: eatenNow(m.name) })),
     };
 }
 
@@ -189,8 +296,9 @@ function renderPlan() {
         document.getElementById('np-title').textContent = t('np.myPlanTitle');
         document.getElementById('np-subtitle').textContent = t('np.myPlanSubtitle', { kcal: m.kcal_target });
         setTargets(m.kcal_target, m.protein_target, m.carbs_target, m.fat_target);
-        banner.textContent = t('np.bannerGenerated', {
-            date: new Date(m.created_at).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' }),
+        banner.textContent = t('np.bannerWeekPlan', {
+            week: weekLabel(NUT.weekStart),
+            date: new Date(m.created_at).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' }),
         });
         genBtn.textContent = t('np.regenerate');
         document.getElementById('np-notes').innerHTML =
@@ -200,12 +308,13 @@ function renderPlan() {
         document.getElementById('np-title').textContent = planText(m.title);
         document.getElementById('np-subtitle').textContent = planText(m.subtitle);
         setTargets(m.calories, m.protein, m.carbs, m.fat);
-        banner.textContent = NUT.dbReady ? t('np.bannerDefault') : t('foods.dbMissing');
+        banner.textContent = NUT.dbReady ? t('np.bannerNoWeekPlan', { week: weekLabel(NUT.weekStart) }) : t('foods.dbMissing');
         genBtn.textContent = t('np.generate');
         document.getElementById('np-notes').innerHTML =
             m.notes.map(n => `<li>${escapeHtml(planText(n))}</li>`).join('');
     }
 
+    renderWeekNav();
     renderDayTabs();
     renderDay();
     renderRotation();
@@ -218,14 +327,27 @@ function setTargets(kcal, p, c, f) {
     document.getElementById('np-f').textContent = f + ' g';
 }
 
+function renderWeekNav() {
+    const n = weeksFromNow(NUT.weekStart);
+    document.getElementById('week-label').textContent = weekLabel(NUT.weekStart);
+    document.getElementById('week-prev').disabled = n <= -WEEKS_BACK;
+    document.getElementById('week-next').disabled = n >= WEEKS_AHEAD;
+    document.getElementById('week-today').hidden = n === 0 && isTodaySelected();
+}
+
 function renderDayTabs() {
     const tabs = document.getElementById('day-tabs');
-    tabs.innerHTML = DAY_NAMES.map((d, i) =>
-        `<div class="day-tab ${i === selectedDayIdx ? 'active' : ''}" data-i="${i}">${t('dayShort.' + d)}</div>`
-    ).join('');
+    const today = todayISO();
+    tabs.innerHTML = DAY_NAMES.map((d, i) => {
+        const iso = dateOfDay(i);
+        const num = new Date(iso + 'T00:00:00').getDate();
+        return `<div class="day-tab ${i === selectedDayIdx ? 'active' : ''} ${iso === today ? 'today' : ''}" data-i="${i}">
+                    <span>${t('dayShort.' + d)}</span> <strong>${num}</strong></div>`;
+    }).join('');
     tabs.querySelectorAll('.day-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             selectedDayIdx = Number(tab.dataset.i);
+            renderWeekNav();
             renderDayTabs();
             renderDay();
         });
@@ -234,11 +356,14 @@ function renderDayTabs() {
 
 function renderDay() {
     const view = currentDayView();
-    const dayLabel = t('day.' + view.day);
+    const today = isTodaySelected();
     const P = t('np.P'), C = t('np.C'), F = t('np.F');
-    document.getElementById('day-name').textContent = dayLabel;
+    document.getElementById('day-name').innerHTML =
+        escapeHtml(dayLabelFull(selectedDayIdx)) + (today ? ` <span class="badge green">${escapeHtml(t('np.today'))}</span>` : '');
     document.getElementById('day-total').textContent =
         `  ·  ~${view.total.kcal} kcal · ${P} ${view.total.p}g · ${C} ${view.total.c}g · ${F} ${view.total.f}g`;
+    document.getElementById('eat-hint').textContent =
+        !NUT.mealsReady ? '' : today ? t('np.eatHintToday') : t('np.eatHintOther');
 
     document.getElementById('meals').innerHTML = view.meals.map(meal => {
         if (meal.empty) {
@@ -248,18 +373,20 @@ function renderDay() {
                     <button type="button" class="btn btn-ghost btn-sm" data-act="add" data-meal="${meal.name}">${escapeHtml(t('np.addMeal'))}</button>
                 </div>`;
         }
-        const actions = view.editable ? `
-            <div class="meal-actions">
-                ${NUT.mealsReady ? `<button type="button" class="btn btn-sm eat-btn ${meal.eaten ? 'eaten' : ''}" data-act="eat" data-meal="${meal.name}"
-                        aria-pressed="${meal.eaten}">${escapeHtml(t(meal.eaten ? 'meals.eatenToday' : 'meals.ateToday'))}</button>` : ''}
+        // "Mark as eaten" only for today's meals.
+        const eatBtn = today && NUT.mealsReady
+            ? `<button type="button" class="btn btn-sm eat-btn ${meal.eaten ? 'eaten' : ''}" data-act="eat" data-meal="${meal.name}"
+                       aria-pressed="${meal.eaten}">${escapeHtml(t(meal.eaten ? 'meals.eaten' : 'meals.markEaten'))}</button>`
+            : '';
+        const editBtns = view.editable ? `
                 <span class="meal-icon-actions">
                     <button type="button" class="pref-btn active" data-act="edit" data-meal="${meal.name}" title="${escapeHtml(t('np.editMeal'))}">✏️</button>
                     ${NUT.mealsReady ? `<button type="button" class="pref-btn active" data-act="save" data-meal="${meal.name}" title="${escapeHtml(t('np.saveAsMine'))}">⭐</button>` : ''}
                     <button type="button" class="icon-btn" data-act="delete" data-meal="${meal.name}" title="${escapeHtml(t('np.deleteMeal'))}">🗑</button>
-                </span>
-            </div>` : '';
+                </span>` : '';
+        const actions = eatBtn || editBtns ? `<div class="meal-actions">${eatBtn}${editBtns}</div>` : '';
         return `
-            <div class="card meal-card">
+            <div class="card meal-card ${meal.eaten ? 'meal-eaten' : ''}">
                 <div class="meal-head">
                     <h4>${t('meal.' + meal.name)}${meal.savedName ? ` <span class="saved-tag">⭐ ${escapeHtml(meal.savedName)}</span>` : ''}</h4>
                     <div class="macro-pills">
@@ -273,9 +400,6 @@ function renderDay() {
                 ${actions}
             </div>`;
     }).join('');
-
-    document.getElementById('log-day-btn').textContent =
-        t('np.logBtn', { day: dayLabel, kcal: view.total.kcal });
 }
 
 // Liked foods when the user has marked any; otherwise the default rotation list.
@@ -308,12 +432,11 @@ function renderTips() {
         NUTRITION_PLAN.tips.map((tip, i) => `<li><strong>${i + 1}.</strong> ${escapeHtml(planText(tip))}</li>`).join('');
 }
 
-// ---- Generate -----------------------------------------------
+// ---- Generate (for the week on screen) -----------------------
 async function generatePlan() {
     if (!NUT.dbReady) { showToast(t('foods.dbMissing'), 'error'); return; }
     const btn = document.getElementById('btn-generate');
     btn.disabled = true;
-    let newPlanId = null;
     try {
         clearProfileCache();
         const p = await loadProfile();
@@ -324,7 +447,7 @@ async function generatePlan() {
             fat: Number(p.fat_target),
         };
 
-        // Meals eaten 2+ times in the last 4 weeks go into the plan first.
+        // Favourites (top-rated or eaten often) go into the plan first.
         const favourites = NUT.mealsReady ? favouritesFromLog(NUT.mealLog, NUT.savedMeals, todayISO()) : [];
         const { items: generated, missing, favouritesPlaced } =
             generateMealPlan(NUT.foods, NUT.prefs, targets, Math.random, favourites);
@@ -336,36 +459,46 @@ async function generatePlan() {
             return;
         }
 
-        const { data: plan, error: pErr } = await db.from('meal_plans').insert([{
-            kcal_target: targets.kcal,
-            protein_target: targets.protein,
-            carbs_target: targets.carbs,
-            fat_target: targets.fat,
-        }]).select().single();
-        if (pErr) throw pErr;
-        newPlanId = plan.plan_id;
+        // One plan per week: reuse this week's row (fresh targets), replace its meals.
+        const existing = NUT.plansByWeek[NUT.weekStart];
+        let plan;
+        if (existing) {
+            const { data, error } = await db.from('meal_plans').update({
+                kcal_target: targets.kcal, protein_target: targets.protein,
+                carbs_target: targets.carbs, fat_target: targets.fat, created_at: new Date().toISOString(),
+            }).eq('plan_id', existing.plan_id).select().single();
+            if (error) throw error;
+            const { error: dErr } = await db.from('meal_plan_items').delete().eq('plan_id', existing.plan_id);
+            if (dErr) throw dErr;
+            plan = data;
+        } else {
+            const { data, error } = await db.from('meal_plans').insert([{
+                week_start: NUT.weekStart,
+                kcal_target: targets.kcal, protein_target: targets.protein,
+                carbs_target: targets.carbs, fat_target: targets.fat,
+            }]).select().single();
+            if (error) throw error;
+            plan = data;
+        }
+        NUT.plansByWeek[NUT.weekStart] = plan;
 
         const { error: iErr } = await db.from('meal_plan_items')
-            .insert(items.map(it => ({ ...it, plan_id: newPlanId })));
+            .insert(items.map(it => ({ ...it, plan_id: plan.plan_id })));
         if (iErr) throw iErr;
 
-        // Keep only the newest plan.
-        await db.from('meal_plans').delete().lt('plan_id', newPlanId);
-
-        NUT.plan = await loadPlanItems(plan);
-        renderPlan();
+        await reloadPlan();
         showToast(missing.includes('vegetables') ? t('np.generatedNoVeg')
             : favouritesPlaced ? t('np.generatedFav', { n: favouritesPlaced })
             : t('np.generated'));
     } catch (err) {
-        if (newPlanId) await db.from('meal_plans').delete().eq('plan_id', newPlanId);
-        showToast(t('common.error', { msg: err.message }), 'error');
+        showToast(planSaveError(err), 'error');
+        await reloadPlan().catch(() => {});
     } finally {
         btn.disabled = !NUT.dbReady;
     }
 }
 
-// ---- Editing the generated plan -----------------------------
+// ---- Plan meal actions --------------------------------------
 function planDay() {
     return NUT.plan && NUT.plan.days[selectedDayIdx];
 }
@@ -375,26 +508,35 @@ function planMeal(slot) {
     return day && day.meals.find(m => m.name === slot);
 }
 
-function planMealSignature(m) {
-    return mealSignature(m.savedMealId, m.items.map(it => it.food.food_id));
-}
-
 async function onPlanMealClick(e) {
     const btn = e.target.closest('[data-act]');
-    if (!btn || !NUT.plan) return;
+    if (!btn) return;
     const slot = btn.dataset.meal;
-    const meal = planMeal(slot);
 
-    switch (btn.dataset.act) {
-        case 'eat': {
+    if (btn.dataset.act === 'eat') {
+        if (!isTodaySelected()) return;
+        const meal = planMeal(slot);
+        if (meal) {
             const saved = meal.savedMealId && NUT.savedMeals.find(s => s.meal_id === meal.savedMealId);
             await toggleEatenToday({
                 slot, savedMealId: meal.savedMealId, name: saved ? saved.name : null,
                 items: meal.items.map(it => ({ food_id: it.food.food_id, grams: it.grams })),
             });
-            renderDay();
-            break;
+        } else {
+            // Default (built-in) plan: log the meal's listed totals.
+            const def = currentDayView().meals.find(m => m.name === slot);
+            await toggleEatenToday({
+                slot, savedMealId: null, name: null, items: [],
+                macros: { kcal: def.kcal, p: def.p, c: def.c, f: def.f },
+            });
         }
+        renderDay();
+        return;
+    }
+
+    if (!NUT.plan) return;
+    const meal = planMeal(slot);
+    switch (btn.dataset.act) {
         case 'edit':
             openMealEditor({ mode: 'plan', slot, savedMealId: meal.savedMealId,
                              items: meal.items.map(it => ({ food_id: it.food.food_id, grams: it.grams })) });
@@ -407,7 +549,7 @@ async function onPlanMealClick(e) {
                              items: meal.items.map(it => ({ food_id: it.food.food_id, grams: it.grams })) });
             break;
         case 'delete': {
-            const ok = await confirmToast(t('np.confirmDeleteMeal', { meal: t('meal.' + slot), day: t('day.' + planDay().day) }),
+            const ok = await confirmToast(t('np.confirmDeleteMeal', { meal: t('meal.' + slot), day: dayLabelFull(selectedDayIdx) }),
                                           { okText: t('common.delete') });
             if (ok) await savePlanMeal(slot, [], null);
             break;
@@ -415,9 +557,10 @@ async function onPlanMealClick(e) {
     }
 }
 
-// Replace one meal of a plan day (empty items = delete it). Defaults to the day on screen.
-async function savePlanMeal(slot, items, savedMealId, { dayIdx = selectedDayIdx, quiet = false } = {}) {
-    const planId = NUT.plan.meta.plan_id;
+// Replace one meal of a plan day (empty items = delete it).
+// Defaults to the day and week on screen; planRow targets another week.
+async function savePlanMeal(slot, items, savedMealId, { dayIdx = selectedDayIdx, planRow = null, quiet = false } = {}) {
+    const planId = (planRow || NUT.plan.meta).plan_id;
     const dayNo = dayIdx + 1;
     const { error: dErr } = await db.from('meal_plan_items').delete()
         .eq('plan_id', planId).eq('day_of_week', dayNo).eq('meal', slot);
@@ -443,25 +586,4 @@ async function linkPlanMealToSaved(slot, mealId) {
     const { error } = await db.from('meal_plan_items').update({ saved_meal_id: mealId })
         .eq('plan_id', NUT.plan.meta.plan_id).eq('day_of_week', selectedDayIdx + 1).eq('meal', slot);
     if (!error) await reloadPlan();
-}
-
-// ---- Log to tracker -----------------------------------------
-// Push the selected day's calorie total into today's daily_log.
-async function logDayCalories() {
-    const kcal = currentDayView().total.kcal;
-    const today = todayISO();
-    try {
-        const { data: existing } = await db.from('daily_log')
-            .select('calories_eaten').eq('log_date', today).maybeSingle();
-        if (existing && existing.calories_eaten &&
-            !confirm(t('np.confirmReplace', { existing: existing.calories_eaten, kcal }))) {
-            return;
-        }
-        const { error } = await db.from('daily_log').upsert(
-            { log_date: today, calories_eaten: kcal }, { onConflict: 'log_date' });
-        if (error) throw error;
-        showToast(t('np.logged', { kcal }));
-    } catch (err) {
-        showToast(t('common.error', { msg: err.message }), 'error');
-    }
 }
