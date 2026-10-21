@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitTrack — Workout History</title>
+    <title data-i18n="hist.title">FitTrack — Workout History</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,27 +11,28 @@
 
     <div class="container">
         <div class="page-head">
-            <h1>Workout History</h1>
-            <p class="muted">Every training session, timed duration and calories burned.</p>
+            <h1 data-i18n="hist.h1">Workout History</h1>
+            <p class="muted" data-i18n="hist.subtitle">Every training session, timed duration and calories burned.</p>
         </div>
 
         <div class="grid cols-3">
-            <div class="stat"><div class="label">Total workouts</div><div class="value" id="h-total">—</div></div>
-            <div class="stat"><div class="label">Total time trained</div><div class="value" id="h-time">—</div></div>
-            <div class="stat"><div class="label">Total calories burned</div><div class="value" id="h-cals">—</div></div>
+            <div class="stat"><div class="label" data-i18n="hist.total">Total workouts</div><div class="value" id="h-total">—</div></div>
+            <div class="stat"><div class="label" data-i18n="hist.time">Total time trained</div><div class="value" id="h-time">—</div></div>
+            <div class="stat"><div class="label" data-i18n="hist.cals">Total calories burned</div><div class="value" id="h-cals">—</div></div>
         </div>
 
-        <div class="section-title">📜 Sessions</div>
+        <div class="section-title" data-i18n="hist.sessions">📜 Sessions</div>
         <div id="workout-list"></div>
         <div id="workout-empty" class="empty" style="display:none">
             <div class="icon">🏋️</div>
-            <p>No workouts logged yet.</p>
-            <a href="workout.html" class="btn btn-primary" style="margin-top:10px">Start a Workout</a>
+            <p data-i18n="hist.empty">No workouts logged yet.</p>
+            <a href="workout.html" class="btn btn-primary" style="margin-top:10px" data-i18n="hist.start">Start a Workout</a>
         </div>
     </div>
 
     <div id="toast" class="toast"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="i18n.js"></script>
     <script src="config.js"></script>
     <script src="history-page.js"></script>
 </body>

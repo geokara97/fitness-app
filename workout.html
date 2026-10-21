@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitTrack — Workout</title>
+    <title data-i18n="wo.title">FitTrack — Workout</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,58 +11,59 @@
 
     <div class="container">
         <div class="page-head">
-            <h1>Workout Session</h1>
-            <p class="muted">Run the timer while you train — calories burned are counted live and saved to today's tracker.</p>
+            <h1 data-i18n="wo.h1">Workout Session</h1>
+            <p class="muted" data-i18n="wo.subtitle">Run the timer while you train — calories burned are counted live and saved to today's tracker.</p>
         </div>
 
         <!-- Timer -->
         <div class="timer-card">
-            <div class="timer-state" id="timer-state">Ready</div>
+            <div class="timer-state" id="timer-state" data-i18n="wo.state.idle">Ready</div>
             <div class="timer-display" id="timer-display">00:00</div>
             <div class="timer-burn" id="timer-burn">🔥 0 kcal burned</div>
             <div class="timer-sub" id="timer-sub">Bodyweight 90 kg · rate 0.075 kcal/kg/min</div>
             <div class="timer-controls">
-                <button class="btn btn-success btn-lg" id="btn-start">▶ Start</button>
-                <button class="btn btn-ghost btn-lg" id="btn-pause" disabled>⏸ Pause</button>
-                <button class="btn btn-danger btn-lg" id="btn-reset" disabled>↺ Reset</button>
+                <button class="btn btn-success btn-lg" id="btn-start" data-i18n="wo.start">▶ Start</button>
+                <button class="btn btn-ghost btn-lg" id="btn-pause" disabled data-i18n="wo.pause">⏸ Pause</button>
+                <button class="btn btn-danger btn-lg" id="btn-reset" disabled data-i18n="wo.reset">↺ Reset</button>
             </div>
         </div>
 
         <!-- Session details -->
         <div class="card" style="margin-top:16px">
-            <div class="section-title mt-0">📋 Session Details</div>
+            <div class="section-title mt-0" data-i18n="wo.details">📋 Session Details</div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="w-date">Date</label>
+                    <label for="w-date" data-i18n="common.date">Date</label>
                     <input type="date" id="w-date" required>
                 </div>
                 <div class="form-group">
-                    <label for="w-split">Split</label>
+                    <label for="w-split" data-i18n="wo.split">Split</label>
                     <select id="w-split"></select>
                 </div>
                 <div class="form-group">
-                    <label for="w-bodyweight">Bodyweight (kg)</label>
+                    <label for="w-bodyweight" data-i18n="wo.bodyweight">Bodyweight (kg)</label>
                     <input type="number" id="w-bodyweight" step="0.1">
                 </div>
             </div>
         </div>
 
         <!-- Exercises -->
-        <div class="section-title">🏋️ Exercises</div>
+        <div class="section-title" data-i18n="wo.exercises">🏋️ Exercises</div>
         <div id="exercises"></div>
-        <button class="btn btn-ghost" id="btn-add-exercise">+ Add Exercise</button>
+        <button class="btn btn-ghost" id="btn-add-exercise" data-i18n="wo.addExercise">+ Add Exercise</button>
 
         <div class="card" style="margin-top:16px">
             <div class="form-group">
-                <label for="w-notes">Workout notes</label>
-                <textarea id="w-notes" rows="2" placeholder="How did it feel?"></textarea>
+                <label for="w-notes" data-i18n="wo.notes">Workout notes</label>
+                <textarea id="w-notes" rows="2" placeholder="How did it feel?" data-i18n-placeholder="wo.notesPh"></textarea>
             </div>
-            <button class="btn btn-primary btn-lg btn-block" id="btn-save">Finish & Save Workout</button>
+            <button class="btn btn-primary btn-lg btn-block" id="btn-save" data-i18n="wo.save">Finish & Save Workout</button>
         </div>
     </div>
 
     <div id="toast" class="toast"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="i18n.js"></script>
     <script src="config.js"></script>
     <script src="workout-page.js"></script>
 </body>

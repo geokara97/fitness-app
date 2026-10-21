@@ -144,3 +144,94 @@ const NUTRITION_PLAN = {
         'Track body weight 2-3 times weekly under the same conditions (morning, fasted).',
     ],
 };
+
+// ---- Greek text for the plan (keyed by the English string) ----
+const NUTRITION_PLAN_EL = {
+    'Weekly Nutrition Plan': 'Εβδομαδιαίο Πρόγραμμα Διατροφής',
+    '1800 kcal — Fat Loss & Muscle Retention': '1800 kcal — Απώλεια Λίπους & Διατήρηση Μυϊκής Μάζας',
+    'All meat, fish, rice, oats and potatoes are listed in RAW weight.': 'Όλα τα κρέατα, τα ψάρια, το ρύζι, η βρώμη και οι πατάτες αναφέρονται σε ΩΜΟ βάρος.',
+    'Vegetables can be eaten freely unless otherwise stated.': 'Τα λαχανικά τρώγονται ελεύθερα, εκτός αν αναφέρεται διαφορετικά.',
+    'Daily whey shake is built into the plan.': 'Το καθημερινό ρόφημα πρωτεΐνης whey περιλαμβάνεται στο πρόγραμμα.',
+
+    // Meal items
+    '80 g oats (raw)': '80 g βρώμη (ωμή)',
+    '70 g oats (raw)': '70 g βρώμη (ωμή)',
+    '60 g oats (raw)': '60 g βρώμη (ωμή)',
+    '30 g whey protein powder': '30 g πρωτεΐνη whey σε σκόνη',
+    '200 g low-fat Greek yogurt': '200 g στραγγιστό γιαούρτι χαμηλών λιπαρών',
+    'Cinnamon to taste': 'Κανέλα κατά βούληση',
+    '250 g white fish (raw)': '250 g λευκό ψάρι (ωμό)',
+    '50 g rice (raw)': '50 g ρύζι (ωμό)',
+    'Salad': 'Σαλάτα',
+    'Large salad': 'Μεγάλη σαλάτα',
+    'Vegetables': 'Λαχανικά',
+    '10 g olive oil': '10 g ελαιόλαδο',
+    '5 g olive oil': '5 g ελαιόλαδο',
+    '200 g low-fat cottage cheese': '200 g cottage cheese χαμηλών λιπαρών',
+    '1 apple': '1 μήλο',
+    '1 banana': '1 μπανάνα',
+    '1 piece of fruit': '1 φρούτο',
+    '220 g chicken breast (raw)': '220 g στήθος κοτόπουλο (ωμό)',
+    '250 g chicken breast (raw)': '250 g στήθος κοτόπουλο (ωμό)',
+    '300 g potatoes (raw)': '300 g πατάτες (ωμές)',
+    '350 g potatoes (raw)': '350 g πατάτες (ωμές)',
+    '300 g sweet potato (raw)': '300 g γλυκοπατάτα (ωμή)',
+    '3 whole eggs': '3 ολόκληρα αυγά',
+    '80 g whole grain bread': '80 g ψωμί ολικής άλεσης',
+    '40 g whole grain bread': '40 g ψωμί ολικής άλεσης',
+    '80 g turkey ham': '80 g γαλοπούλα (αλλαντικό)',
+    '220 g lean beef steak (raw)': '220 g άπαχη μοσχαρίσια μπριζόλα (ωμή)',
+    '220 g lean beef mince 5% fat (raw)': '220 g άπαχος μοσχαρίσιος κιμάς 5% λιπαρά (ωμός)',
+    '220 g pork tenderloin (raw)': '220 g χοιρινό φιλέτο (ωμό)',
+    '220 g pork loin (raw)': '220 g χοιρινό κόντρα φιλέτο (ωμό)',
+    '220 g salmon (raw)': '220 g σολομός (ωμός)',
+    '2 cans tuna in water (drained ~240 g)': '2 κονσέρβες τόνος σε νερό (στραγγισμένος ~240 g)',
+    '15 g mixed nuts': '15 g ανάμεικτοι ξηροί καρποί',
+    '15 g walnuts': '15 g καρύδια',
+    '15 g peanut butter': '15 g φυστικοβούτυρο',
+
+    // Rotation
+    'Chicken breast': 'Στήθος κοτόπουλο',
+    'Lean beef': 'Άπαχο μοσχάρι',
+    'Lean beef mince 5%': 'Άπαχος μοσχαρίσιος κιμάς 5%',
+    'Pork tenderloin': 'Χοιρινό φιλέτο',
+    'Pork loin': 'Χοιρινό κόντρα φιλέτο',
+    'Salmon': 'Σολομός',
+    'White fish': 'Λευκό ψάρι',
+    'Tuna (canned in water)': 'Τόνος (κονσέρβα σε νερό)',
+    'Eggs': 'Αυγά',
+    'Turkey ham': 'Γαλοπούλα (αλλαντικό)',
+    'Cottage cheese (low-fat)': 'Cottage cheese (χαμηλά λιπαρά)',
+    'Greek yogurt (low-fat)': 'Στραγγιστό γιαούρτι (χαμηλά λιπαρά)',
+    'Whey protein': 'Πρωτεΐνη whey',
+    'Oats': 'Βρώμη',
+    'Rice': 'Ρύζι',
+    'Potatoes': 'Πατάτες',
+    'Sweet potatoes': 'Γλυκοπατάτες',
+    'Whole grain bread': 'Ψωμί ολικής άλεσης',
+    'Fruit': 'Φρούτα',
+    'Olive oil (extra virgin)': 'Ελαιόλαδο (έξτρα παρθένο)',
+    'Almonds': 'Αμύγδαλα',
+    'Walnuts': 'Καρύδια',
+    'Mixed nuts': 'Ανάμεικτοι ξηροί καρποί',
+    'Peanut butter': 'Φυστικοβούτυρο',
+
+    // Oil swaps
+    '100 g potatoes (raw)': '100 g πατάτες (ωμές)',
+    '15 g oats (raw)': '15 g βρώμη (ωμή)',
+    '30 g rice (raw)': '30 g ρύζι (ωμό)',
+    '1 slice bread': '1 φέτα ψωμί',
+
+    // Tips
+    'Keep protein high every single day.': 'Κρατήστε την πρωτεΐνη υψηλή κάθε μέρα.',
+    'Train hard — but recover properly between sessions.': 'Προπονηθείτε σκληρά — αλλά αναρρώστε σωστά ανάμεσα στις προπονήσεις.',
+    'Sleep 7-9 hours nightly for optimal fat loss and muscle retention.': 'Κοιμηθείτε 7-9 ώρες κάθε βράδυ για βέλτιστη απώλεια λίπους και διατήρηση μυϊκής μάζας.',
+    'Drink plenty of water (aim for 2.5-3 L daily, more on training days).': 'Πίνετε άφθονο νερό (στόχος 2,5-3 L την ημέρα, περισσότερο τις ημέρες προπόνησης).',
+    "Aim for consistency, not perfection — one off-day won't ruin progress.": 'Στοχεύστε στη συνέπεια, όχι στην τελειότητα — μία κακή μέρα δεν θα χαλάσει την πρόοδο.',
+    'Track body weight 2-3 times weekly under the same conditions (morning, fasted).': 'Ζυγίζεστε 2-3 φορές την εβδομάδα υπό τις ίδιες συνθήκες (πρωί, νηστικοί).',
+};
+
+// Plan text in the current language (falls back to the English original).
+function planText(s) {
+    return (LANG === 'el' && NUTRITION_PLAN_EL[s]) || s;
+}

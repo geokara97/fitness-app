@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitTrack — Settings</title>
+    <title data-i18n="set.title">FitTrack — Settings</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,65 +11,77 @@
 
     <div class="container">
         <div class="page-head">
-            <h1>Settings</h1>
-            <p class="muted">Your personal stats and calorie-burn formula constants.</p>
+            <h1 data-i18n="nav.settings">Settings</h1>
+            <p class="muted" data-i18n="set.subtitle">Your personal stats and calorie-burn formula constants.</p>
+        </div>
+
+        <!-- Language (saved in this browser, not the profile) -->
+        <div class="card">
+            <div class="section-title mt-0" data-i18n="set.language">🌐 Language</div>
+            <div class="form-group">
+                <label for="s-lang" data-i18n="set.languageLabel">App language</label>
+                <select id="s-lang">
+                    <option value="en">English</option>
+                    <option value="el">Ελληνικά</option>
+                </select>
+            </div>
         </div>
 
         <form id="settings-form">
             <!-- Stats -->
             <div class="card">
-                <div class="section-title mt-0">👤 Your Stats</div>
+                <div class="section-title mt-0" data-i18n="set.stats">👤 Your Stats</div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="s-name">Name</label>
+                        <label for="s-name" data-i18n="set.name">Name</label>
                         <input type="text" id="s-name">
                     </div>
                     <div class="form-group">
-                        <label for="s-age">Age</label>
+                        <label for="s-age" data-i18n="set.age">Age</label>
                         <input type="number" id="s-age" min="10" max="100">
                     </div>
                     <div class="form-group">
-                        <label for="s-gender">Gender</label>
+                        <label for="s-gender" data-i18n="set.gender">Gender</label>
                         <select id="s-gender">
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
+                            <option value="Male" data-i18n="set.male">Male</option>
+                            <option value="Female" data-i18n="set.female">Female</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="s-height">Height (cm)</label>
+                        <label for="s-height" data-i18n="set.height">Height (cm)</label>
                         <input type="number" id="s-height" step="0.1">
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="s-activity">Activity level</label>
+                    <label for="s-activity" data-i18n="set.activity">Activity level</label>
                     <select id="s-activity">
-                        <option>Sedentary (desk job)</option>
-                        <option>Lightly active</option>
-                        <option>Moderately active</option>
-                        <option>Very active</option>
+                        <option value="Sedentary (desk job)" data-i18n="act.sedentary">Sedentary (desk job)</option>
+                        <option value="Lightly active" data-i18n="act.light">Lightly active</option>
+                        <option value="Moderately active" data-i18n="act.moderate">Moderately active</option>
+                        <option value="Very active" data-i18n="act.very">Very active</option>
                     </select>
                 </div>
             </div>
 
             <!-- Goal -->
             <div class="card">
-                <div class="section-title mt-0">🎯 Weight Goal</div>
+                <div class="section-title mt-0" data-i18n="set.goal">🎯 Weight Goal</div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="s-start">Start weight (kg)</label>
+                        <label for="s-start" data-i18n="set.start">Start weight (kg)</label>
                         <input type="number" id="s-start" step="0.1">
                     </div>
                     <div class="form-group">
-                        <label for="s-current">Current weight (kg)</label>
+                        <label for="s-current" data-i18n="set.current">Current weight (kg)</label>
                         <input type="number" id="s-current" step="0.1">
-                        <div class="hint">Auto-updates when you log a weigh-in.</div>
+                        <div class="hint" data-i18n="set.currentHint">Auto-updates when you log a weigh-in.</div>
                     </div>
                     <div class="form-group">
-                        <label for="s-goal">Goal weight (kg)</label>
+                        <label for="s-goal" data-i18n="set.goalW">Goal weight (kg)</label>
                         <input type="number" id="s-goal" step="0.1">
                     </div>
                     <div class="form-group">
-                        <label for="s-goaldate">Target date</label>
+                        <label for="s-goaldate" data-i18n="set.targetDate">Target date</label>
                         <input type="date" id="s-goaldate">
                     </div>
                 </div>
@@ -77,70 +89,71 @@
 
             <!-- Burn rates -->
             <div class="card">
-                <div class="section-title mt-0">⚡ Calorie-Burn Constants</div>
-                <p class="muted text-sm">These drive every burn calculation, including the workout timer.</p>
+                <div class="section-title mt-0" data-i18n="set.constants">⚡ Calorie-Burn Constants</div>
+                <p class="muted text-sm" data-i18n="set.constantsDesc">These drive every burn calculation, including the workout timer.</p>
                 <div class="form-row" style="margin-top:10px">
                     <div class="form-group">
-                        <label for="s-lift-rate">Lifting kcal / kg / min</label>
+                        <label for="s-lift-rate" data-i18n="set.liftRate">Lifting kcal / kg / min</label>
                         <input type="number" id="s-lift-rate" step="0.001">
-                        <div class="hint">Workout burn = bodyweight × this × minutes timed.</div>
+                        <div class="hint" data-i18n="set.liftHint">Workout burn = bodyweight × this × minutes timed.</div>
                     </div>
                     <div class="form-group">
-                        <label for="s-lift-min">Default lifting session (min)</label>
+                        <label for="s-lift-min" data-i18n="set.liftMin">Default lifting session (min)</label>
                         <input type="number" id="s-lift-min" step="1">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="s-walk">Walking kcal / 1,000 steps</label>
+                        <label for="s-walk" data-i18n="set.walk">Walking kcal / 1,000 steps</label>
                         <input type="number" id="s-walk" step="1">
                     </div>
                     <div class="form-group">
-                        <label for="s-neat">NEAT multiplier</label>
+                        <label for="s-neat" data-i18n="set.neat">NEAT multiplier</label>
                         <input type="number" id="s-neat" step="0.01">
-                        <div class="hint">BMR × this = resting daily burn.</div>
+                        <div class="hint" data-i18n="set.neatHint">BMR × this = resting daily burn.</div>
                     </div>
                 </div>
             </div>
 
             <!-- Nutrition targets -->
             <div class="card">
-                <div class="section-title mt-0">🥗 Nutrition Targets</div>
+                <div class="section-title mt-0" data-i18n="set.nutrition">🥗 Nutrition Targets</div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="s-kcal">Daily calorie target</label>
+                        <label for="s-kcal" data-i18n="set.kcal">Daily calorie target</label>
                         <input type="number" id="s-kcal" step="10">
                     </div>
                     <div class="form-group">
-                        <label for="s-protein">Protein (g)</label>
+                        <label for="s-protein" data-i18n="set.protein">Protein (g)</label>
                         <input type="number" id="s-protein" step="1">
                     </div>
                     <div class="form-group">
-                        <label for="s-carbs">Carbs (g)</label>
+                        <label for="s-carbs" data-i18n="set.carbs">Carbs (g)</label>
                         <input type="number" id="s-carbs" step="1">
                     </div>
                     <div class="form-group">
-                        <label for="s-fat">Fat (g)</label>
+                        <label for="s-fat" data-i18n="set.fat">Fat (g)</label>
                         <input type="number" id="s-fat" step="1">
                     </div>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-lg btn-block">Save Settings</button>
+            <button type="submit" class="btn btn-primary btn-lg btn-block" data-i18n="set.save">Save Settings</button>
         </form>
 
         <!-- Computed -->
-        <div class="section-title">📊 Your Current Numbers</div>
+        <div class="section-title" data-i18n="set.numbers">📊 Your Current Numbers</div>
         <div class="grid cols-4">
-            <div class="stat"><div class="label">BMR</div><div class="value" id="c-bmr">—</div><div class="sub">at rest</div></div>
-            <div class="stat"><div class="label">Resting burn</div><div class="value" id="c-resting">—</div><div class="sub">BMR + NEAT</div></div>
-            <div class="stat"><div class="label">Training-day TDEE</div><div class="value" id="c-train">—</div><div class="sub">+ 10k steps + lift</div></div>
-            <div class="stat"><div class="label">Rest-day TDEE</div><div class="value" id="c-rest">—</div><div class="sub">+ 10k steps</div></div>
+            <div class="stat"><div class="label">BMR</div><div class="value" id="c-bmr">—</div><div class="sub" data-i18n="set.atRest">at rest</div></div>
+            <div class="stat"><div class="label" data-i18n="set.resting">Resting burn</div><div class="value" id="c-resting">—</div><div class="sub">BMR + NEAT</div></div>
+            <div class="stat"><div class="label" data-i18n="set.trainTdee">Training-day TDEE</div><div class="value" id="c-train">—</div><div class="sub" data-i18n="set.trainSub">+ 10k steps + lift</div></div>
+            <div class="stat"><div class="label" data-i18n="set.restTdee">Rest-day TDEE</div><div class="value" id="c-rest">—</div><div class="sub" data-i18n="set.restSub">+ 10k steps</div></div>
         </div>
     </div>
 
     <div id="toast" class="toast"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="i18n.js"></script>
     <script src="config.js"></script>
     <script src="settings-page.js"></script>
 </body>

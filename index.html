@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitTrack — Dashboard</title>
+    <title data-i18n="dash.title">FitTrack — Dashboard</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,86 +11,87 @@
 
     <div class="container">
         <div class="page-head">
-            <h1>Dashboard</h1>
-            <p id="greeting" class="muted">Your fat-loss journey at a glance.</p>
+            <h1 data-i18n="nav.dashboard">Dashboard</h1>
+            <p id="greeting" class="muted" data-i18n="dash.greeting">Your fat-loss journey at a glance.</p>
         </div>
 
         <!-- Goal progress -->
-        <div class="section-title">🎯 Goal Progress</div>
+        <div class="section-title" data-i18n="dash.goalProgress">🎯 Goal Progress</div>
         <div class="card">
             <div class="flex-between">
                 <div>
                     <strong id="goal-line">90 kg → 75 kg</strong>
-                    <div class="muted text-sm" id="goal-date-line">Target date —</div>
+                    <div class="muted text-sm" id="goal-date-line" data-i18n="dash.targetDateNone">Target date —</div>
                 </div>
                 <div style="text-align:right">
                     <div class="value" id="goal-pct" style="font-size:1.8rem;font-weight:800">0%</div>
-                    <div class="muted text-sm">complete</div>
+                    <div class="muted text-sm" data-i18n="dash.complete">complete</div>
                 </div>
             </div>
             <div class="progress"><span id="goal-bar" style="width:0%"></span></div>
             <div class="grid cols-4" style="margin-top:16px">
-                <div class="stat"><div class="label">Current</div><div class="value" id="s-current">—</div></div>
-                <div class="stat"><div class="label">Lost so far</div><div class="value good" id="s-lost">—</div></div>
-                <div class="stat"><div class="label">Remaining</div><div class="value" id="s-remaining">—</div></div>
-                <div class="stat"><div class="label">Days left</div><div class="value" id="s-days">—</div></div>
+                <div class="stat"><div class="label" data-i18n="dash.current">Current</div><div class="value" id="s-current">—</div></div>
+                <div class="stat"><div class="label" data-i18n="dash.lost">Lost so far</div><div class="value good" id="s-lost">—</div></div>
+                <div class="stat"><div class="label" data-i18n="dash.remaining">Remaining</div><div class="value" id="s-remaining">—</div></div>
+                <div class="stat"><div class="label" data-i18n="dash.daysLeft">Days left</div><div class="value" id="s-days">—</div></div>
             </div>
         </div>
 
         <!-- Today -->
-        <div class="section-title">📆 Today</div>
+        <div class="section-title" data-i18n="dash.today">📆 Today</div>
         <div class="grid cols-4">
             <div class="stat accent">
-                <div class="label">Calories eaten</div>
+                <div class="label" data-i18n="common.caloriesEaten">Calories eaten</div>
                 <div class="value" id="t-eaten">—</div>
                 <div class="sub" id="t-eaten-sub">target 1800</div>
             </div>
             <div class="stat">
-                <div class="label">Calories burned</div>
+                <div class="label" data-i18n="common.caloriesBurned">Calories burned</div>
                 <div class="value" id="t-burned">—</div>
-                <div class="sub" id="t-burned-sub">resting + steps + workout</div>
+                <div class="sub" id="t-burned-sub" data-i18n="dash.burnedSub">resting + steps + workout</div>
             </div>
             <div class="stat">
-                <div class="label">Net (deficit)</div>
+                <div class="label" data-i18n="common.net">Net (deficit)</div>
                 <div class="value" id="t-net">—</div>
-                <div class="sub" id="t-net-sub">eaten − burned</div>
+                <div class="sub" id="t-net-sub" data-i18n="dash.netSub">eaten − burned</div>
             </div>
             <div class="stat">
-                <div class="label">Workout burn</div>
+                <div class="label" data-i18n="common.workoutBurn">Workout burn</div>
                 <div class="value" id="t-workout">—</div>
-                <div class="sub" id="t-workout-sub">from timer</div>
+                <div class="sub" id="t-workout-sub" data-i18n="dash.fromTimer">from timer</div>
             </div>
         </div>
 
         <!-- 7-day balance -->
-        <div class="section-title">⚖️ Last 7 Days</div>
+        <div class="section-title" data-i18n="dash.last7">⚖️ Last 7 Days</div>
         <div class="grid cols-4">
-            <div class="stat"><div class="label">Avg eaten</div><div class="value" id="w-eaten">—</div></div>
-            <div class="stat"><div class="label">Avg burned</div><div class="value" id="w-burned">—</div></div>
-            <div class="stat"><div class="label">Avg daily deficit</div><div class="value" id="w-deficit">—</div><div class="sub" id="w-loss">—</div></div>
-            <div class="stat"><div class="label">Workouts</div><div class="value" id="w-workouts">—</div><div class="sub">this week</div></div>
+            <div class="stat"><div class="label" data-i18n="dash.avgEaten">Avg eaten</div><div class="value" id="w-eaten">—</div></div>
+            <div class="stat"><div class="label" data-i18n="dash.avgBurned">Avg burned</div><div class="value" id="w-burned">—</div></div>
+            <div class="stat"><div class="label" data-i18n="dash.avgDeficit">Avg daily deficit</div><div class="value" id="w-deficit">—</div><div class="sub" id="w-loss">—</div></div>
+            <div class="stat"><div class="label" data-i18n="dash.workouts">Workouts</div><div class="value" id="w-workouts">—</div><div class="sub" data-i18n="dash.thisWeek">this week</div></div>
         </div>
 
         <!-- Quick links -->
-        <div class="section-title">🚀 Quick Actions</div>
+        <div class="section-title" data-i18n="dash.quick">🚀 Quick Actions</div>
         <div class="grid cols-3">
             <a href="tracker.html" class="nav-card">
-                <div class="icon">📊</div><h3>Daily Tracker</h3>
-                <p>Log weight, calories, steps, sleep & water.</p>
+                <div class="icon">📊</div><h3 data-i18n="nav.tracker">Daily Tracker</h3>
+                <p data-i18n="dash.qTrackerDesc">Log weight, calories, steps, sleep & water.</p>
             </a>
             <a href="nutrition.html" class="nav-card">
-                <div class="icon">🥗</div><h3>Nutrition Plan</h3>
-                <p>Your 1800 kcal weekly meal plan.</p>
+                <div class="icon">🥗</div><h3 data-i18n="dash.qNutritionTitle">Nutrition Plan</h3>
+                <p data-i18n="dash.qNutritionDesc">Your 1800 kcal weekly meal plan.</p>
             </a>
             <a href="workout.html" class="nav-card">
-                <div class="icon">🏋️</div><h3>Start Workout</h3>
-                <p>Timed session — calories counted live.</p>
+                <div class="icon">🏋️</div><h3 data-i18n="dash.qWorkoutTitle">Start Workout</h3>
+                <p data-i18n="dash.qWorkoutDesc">Timed session — calories counted live.</p>
             </a>
         </div>
     </div>
 
     <div id="toast" class="toast"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="i18n.js"></script>
     <script src="config.js"></script>
     <script src="index-page.js"></script>
 </body>

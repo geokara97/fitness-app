@@ -21,6 +21,11 @@ let profile = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     renderNav('settings');
+
+    const langSelect = document.getElementById('s-lang');
+    langSelect.value = LANG;
+    langSelect.addEventListener('change', () => setLang(langSelect.value));
+
     try {
         profile = await loadProfile();
     } catch (e) { return; }
@@ -70,9 +75,9 @@ async function save(e) {
         const { error } = await db.from('profile').update(payload).eq('id', 1);
         if (error) throw error;
         clearProfileCache();
-        showToast('Settings saved');
+        showToast(t('set.saved'));
     } catch (err) {
-        showToast('Error saving: ' + err.message, 'error');
+        showToast(t('common.errorSaving', { msg: err.message }), 'error');
     } finally {
         btn.disabled = false;
     }

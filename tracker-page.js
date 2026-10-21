@@ -95,17 +95,17 @@ async function handleSave(e) {
             }
         }
 
-        showToast('Day saved');
+        showToast(t('trk.saved'));
         await Promise.all([refreshBreakdown(date), refreshCharts(), refreshHistory()]);
     } catch (err) {
-        showToast('Error saving: ' + err.message, 'error');
+        showToast(t('common.errorSaving', { msg: err.message }), 'error');
     }
 }
 
 // ---- Breakdown ----------------------------------------------
 async function refreshBreakdown(date) {
     document.getElementById('bd-date').textContent =
-        `${formatDate(date)} · ${new Date(date + 'T00:00:00').toLocaleDateString('en-GB')}`;
+        `${formatDate(date)} · ${new Date(date + 'T00:00:00').toLocaleDateString(LOCALE)}`;
 
     const { data: weightRows } = await db.from('weight_log')
         .select('log_date, weight').order('log_date', { ascending: true });
@@ -134,12 +134,12 @@ async function refreshBreakdown(date) {
         netEl.textContent = `${net > 0 ? '+' : ''}${round(net)} kcal`;
         netEl.style.color = net < 0 ? 'var(--success)' : 'var(--danger)';
         hint.textContent = net < 0
-            ? `Deficit of ${round(-net)} kcal — on track for fat loss.`
-            : `Surplus of ${round(net)} kcal — over maintenance today.`;
+            ? t('trk.deficitHint', { n: round(-net) })
+            : t('trk.surplusHint', { n: round(net) });
     } else {
         netEl.textContent = '—';
         netEl.style.color = '';
-        hint.textContent = 'Enter calories eaten to see your net balance.';
+        hint.textContent = t('trk.enterCalories');
     }
 }
 
@@ -160,7 +160,7 @@ async function refreshCharts() {
             data: {
                 labels: weightRows.map(w => formatDate(w.log_date)),
                 datasets: [{
-                    label: 'Weight (kg)',
+                    label: t('trk.weight'),
                     data: weightRows.map(w => Number(w.weight)),
                     borderColor: '#4f46e5',
                     backgroundColor: 'rgba(79,70,229,.12)',
@@ -170,7 +170,7 @@ async function refreshCharts() {
             options: chartOpts(v => v + ' kg'),
         });
     } else {
-        wCtx.parentElement.innerHTML = '<p class="muted" style="padding:20px">No weight entries yet.</p>';
+        wCtx.parentElement.innerHTML = `<p class="muted" style="padding:20px">${t('trk.noWeight')}</p>`;
     }
 
     // Net calorie chart
@@ -195,7 +195,7 @@ async function refreshCharts() {
             data: {
                 labels: logged.map(d => formatDate(d.log_date)),
                 datasets: [{
-                    label: 'Net kcal',
+                    label: t('trk.chartNet'),
                     data: nets,
                     backgroundColor: nets.map(n => n < 0 ? 'rgba(16,185,129,.75)' : 'rgba(239,68,68,.75)'),
                 }],
@@ -203,7 +203,7 @@ async function refreshCharts() {
             options: chartOpts(v => v + ' kcal'),
         });
     } else {
-        nCtx.parentElement.innerHTML = '<p class="muted" style="padding:20px">Log calories to see your deficit trend.</p>';
+        nCtx.parentElement.innerHTML = `<p class="muted" style="padding:20px">${t('trk.logToSeeTrend')}</p>`;
     }
 }
 
@@ -259,15 +259,15 @@ async function refreshHistory() {
             <td class="num">${wBurn ? round(wBurn) : '—'}</td>
             <td class="num">${round(total)}</td>
             <td class="num">${netCell}</td>
-            <td class="num"><button class="icon-btn" title="Delete" onclick="deleteDay('${d.log_date}')">×</button></td>
+            <td class="num"><button class="icon-btn" title="${t('common.delete')}" onclick="deleteDay('${d.log_date}')">×</button></td>
         </tr>`;
     }).join('');
 }
 
 async function deleteDay(date) {
-    if (!confirm(`Delete the log for ${date}? Weight entries for that date are kept.`)) return;
+    if (!confirm(t('trk.confirmDelete', { date }))) return;
     const { error } = await db.from('daily_log').delete().eq('log_date', date);
-    if (error) { showToast('Error: ' + error.message, 'error'); return; }
-    showToast('Day deleted');
+    if (error) { showToast(t('common.error', { msg: error.message }), 'error'); return; }
+    showToast(t('trk.deleted'));
     await Promise.all([refreshHistory(), refreshCharts()]);
 }

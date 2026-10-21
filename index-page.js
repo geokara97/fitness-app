@@ -45,7 +45,7 @@ async function renderGoal(p) {
         const days = Math.max(0, Math.round((new Date(p.goal_date) - new Date()) / 86400000));
         document.getElementById('s-days').textContent = days;
         document.getElementById('goal-date-line').textContent =
-            `Target date ${new Date(p.goal_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+            t('dash.targetDate', { date: new Date(p.goal_date).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' }) });
     } else {
         document.getElementById('s-days').textContent = '—';
     }
@@ -69,11 +69,11 @@ async function renderToday(p) {
     const totalBurned = calcTotalBurned(weight, steps, workoutBurn, p);
 
     document.getElementById('t-eaten').textContent = eaten !== null ? `${eaten}` : '—';
-    document.getElementById('t-eaten-sub').textContent = `target ${p.daily_calorie_target}`;
+    document.getElementById('t-eaten-sub').textContent = t('dash.target', { n: p.daily_calorie_target });
     document.getElementById('t-burned').textContent = round(totalBurned);
     document.getElementById('t-workout').textContent = round(workoutBurn);
     document.getElementById('t-workout-sub').textContent =
-        workoutBurn > 0 ? 'logged today' : 'no workout yet';
+        workoutBurn > 0 ? t('dash.loggedToday') : t('dash.noWorkout');
 
     const netEl = document.getElementById('t-net');
     if (eaten !== null) {
@@ -81,10 +81,10 @@ async function renderToday(p) {
         netEl.textContent = `${net > 0 ? '+' : ''}${round(net)}`;
         netEl.className = `value ${net < 0 ? 'good' : 'bad'}`;
         document.getElementById('t-net-sub').textContent =
-            net < 0 ? 'deficit — losing fat' : 'surplus';
+            net < 0 ? t('dash.deficitLosing') : t('dash.surplus');
     } else {
         netEl.textContent = '—';
-        document.getElementById('t-net-sub').textContent = 'log calories to see';
+        document.getElementById('t-net-sub').textContent = t('dash.logToSee');
     }
 }
 
@@ -122,7 +122,7 @@ async function renderWeek(p) {
 
     if (logged.length === 0) {
         ['w-eaten', 'w-burned', 'w-deficit'].forEach(id => document.getElementById(id).textContent = '—');
-        document.getElementById('w-loss').textContent = 'no data logged';
+        document.getElementById('w-loss').textContent = t('dash.noData');
         return;
     }
     const avgEaten = sumEaten / logged.length;
@@ -137,5 +137,5 @@ async function renderWeek(p) {
 
     const weeklyLoss = (-avgNet * 7) / KCAL_PER_KG_FAT;
     document.getElementById('w-loss').textContent =
-        avgNet < 0 ? `≈ ${round(weeklyLoss, 2)} kg/week` : 'surplus this week';
+        avgNet < 0 ? t('dash.perWeek', { n: round(weeklyLoss, 2) }) : t('dash.surplusWeek');
 }

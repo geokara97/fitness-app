@@ -54,7 +54,7 @@ async function loadSplits() {
     const { data } = await db.from('splits').select('*').order('split_name');
     splits = data || [];
     document.getElementById('w-split').innerHTML =
-        '<option value="">— Select split —</option>' +
+        `<option value="">${t('wo.selectSplit')}</option>` +
         splits.map(s => `<option value="${s.split_id}">${s.split_name}</option>`).join('');
 }
 
@@ -84,7 +84,7 @@ function pauseTimer() {
 }
 
 function resetTimer() {
-    if (timer.state !== 'idle' && !confirm('Reset the timer to 00:00?')) return;
+    if (timer.state !== 'idle' && !confirm(t('wo.confirmReset'))) return;
     clearInterval(timer.tickHandle);
     timer.state = 'idle';
     timer.accumulatedMs = 0;
@@ -100,21 +100,21 @@ function liveBurn() {
 function updateTimerUI() {
     const secs = elapsedSeconds();
     document.getElementById('timer-display').textContent = formatClock(secs);
-    document.getElementById('timer-burn').textContent = `🔥 ${round(liveBurn())} kcal burned`;
+    document.getElementById('timer-burn').textContent = t('wo.burn', { n: round(liveBurn()) });
 
     const bw = Number(document.getElementById('w-bodyweight').value) || Number(profile.current_weight);
     document.getElementById('timer-sub').textContent =
-        `Bodyweight ${bw} kg · rate ${profile.lifting_kcal_per_kg_min} kcal/kg/min`;
+        t('wo.sub', { bw, rate: profile.lifting_kcal_per_kg_min });
 
     const stateEl = document.getElementById('timer-state');
     stateEl.className = 'timer-state ' + timer.state;
-    stateEl.textContent = { idle: 'Ready', running: 'Training', paused: 'Paused' }[timer.state];
+    stateEl.textContent = t('wo.state.' + timer.state);
 
     const start = document.getElementById('btn-start');
     const pause = document.getElementById('btn-pause');
     const reset = document.getElementById('btn-reset');
     start.disabled = timer.state === 'running';
-    start.textContent = timer.state === 'paused' ? '▶ Resume' : '▶ Start';
+    start.textContent = timer.state === 'paused' ? t('wo.resume') : t('wo.start');
     pause.disabled = timer.state !== 'running';
     reset.disabled = timer.state === 'idle' && timer.accumulatedMs === 0;
 }
@@ -132,14 +132,14 @@ function addExerciseBlock() {
     block.id = `ex-${id}`;
     block.innerHTML = `
         <div class="exercise-block-head">
-            <strong>Exercise ${id}</strong>
+            <strong>${t('wo.exerciseN', { n: id })}</strong>
             <button type="button" class="icon-btn" onclick="removeExerciseBlock(${id})">×</button>
         </div>
         <div class="form-group">
-            <select class="ex-select"><option value="">— Select exercise —</option>${opts}</select>
+            <select class="ex-select"><option value="">${t('wo.selectExercise')}</option>${opts}</select>
         </div>
         <div class="sets" id="sets-${id}"></div>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="addSet(${id})">+ Add Set</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addSet(${id})">${t('wo.addSet')}</button>
     `;
     document.getElementById('exercises').appendChild(block);
     addSet(id);
@@ -156,8 +156,8 @@ function addSet(blockId) {
     const row = document.createElement('div');
     row.className = 'set-row';
     row.innerHTML = `
-        <span class="set-tag">Set ${setNo}</span>
-        <input type="number" class="set-reps" min="1" placeholder="reps">
+        <span class="set-tag">${t('wo.setN', { n: setNo })}</span>
+        <input type="number" class="set-reps" min="1" placeholder="${t('wo.repsPh')}">
         <input type="number" class="set-weight" step="0.5" placeholder="kg">
         <button type="button" class="icon-btn" onclick="this.closest('.set-row').remove()">×</button>
     `;
@@ -168,11 +168,11 @@ function addSet(blockId) {
 async function saveWorkout() {
     const secs = Math.round(elapsedSeconds());
     if (secs < 5) {
-        if (!confirm('The timer is at 00:00. Save this workout with no timed duration (0 kcal burn)?')) return;
+        if (!confirm(t('wo.confirmZero'))) return;
     }
 
     const date = document.getElementById('w-date').value;
-    if (!date) { showToast('Please pick a date', 'error'); return; }
+    if (!date) { showToast(t('wo.pickDate'), 'error'); return; }
 
     const bodyweight = Number(document.getElementById('w-bodyweight').value) || Number(profile.current_weight);
     const splitId = document.getElementById('w-split').value || null;
@@ -221,10 +221,10 @@ async function saveWorkout() {
             if (eErr) throw eErr;
         }
 
-        showToast(`Workout saved — ${round(calories)} kcal added to ${formatDate(date)}`);
+        showToast(t('wo.saved', { kcal: round(calories), date: formatDate(date) }));
         setTimeout(() => { window.location.href = 'history.html'; }, 1400);
     } catch (err) {
-        showToast('Error saving workout: ' + err.message, 'error');
+        showToast(t('wo.errorSaving', { msg: err.message }), 'error');
         btn.disabled = false;
     }
 }

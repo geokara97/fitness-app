@@ -22,7 +22,7 @@ async function loadProfile() {
     const { data, error } = await db.from('profile').select('*').eq('id', 1).single();
     if (error) {
         console.error('Could not load profile:', error.message);
-        showToast('Could not load profile. Did you run the SQL schema?', 'error');
+        showToast(t('common.profileError'), 'error');
         throw error;
     }
     PROFILE = data;
@@ -83,9 +83,9 @@ function formatDate(dateString) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const cmp = new Date(date); cmp.setHours(0, 0, 0, 0);
     const diff = Math.round((today - cmp) / 86400000);
-    if (diff === 0) return 'Today';
-    if (diff === 1) return 'Yesterday';
-    return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    if (diff === 0) return t('date.today');
+    if (diff === 1) return t('date.yesterday');
+    return date.toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
 function formatClock(totalSeconds) {
@@ -131,18 +131,19 @@ function showToast(message, type = 'success') {
 // ============================================================
 function renderNav(active) {
     const links = [
-        { id: 'dashboard', label: 'Dashboard', icon: '\u{1F3E0}', href: 'index.html' },
-        { id: 'tracker', label: 'Daily Tracker', icon: '\u{1F4CA}', href: 'tracker.html' },
-        { id: 'nutrition', label: 'Nutrition', icon: '\u{1F957}', href: 'nutrition.html' },
-        { id: 'workout', label: 'Workout', icon: '\u{1F3CB}\u{FE0F}', href: 'workout.html' },
-        { id: 'history', label: 'History', icon: '\u{1F4DC}', href: 'history.html' },
-        { id: 'settings', label: 'Settings', icon: '\u{2699}\u{FE0F}', href: 'settings.html' },
+        { id: 'dashboard', label: t('nav.dashboard'), icon: '\u{1F3E0}', href: 'index.html' },
+        { id: 'tracker', label: t('nav.tracker'), icon: '\u{1F4CA}', href: 'tracker.html' },
+        { id: 'nutrition', label: t('nav.nutrition'), icon: '\u{1F957}', href: 'nutrition.html' },
+        { id: 'workout', label: t('nav.workout'), icon: '\u{1F3CB}\u{FE0F}', href: 'workout.html' },
+        { id: 'history', label: t('nav.history'), icon: '\u{1F4DC}', href: 'history.html' },
+        { id: 'settings', label: t('nav.settings'), icon: '\u{2699}\u{FE0F}', href: 'settings.html' },
     ];
     const el = document.getElementById('app-nav');
     if (!el) return;
     el.innerHTML = `
         <a href="index.html" class="nav-brand">\u{1F4AA} FitTrack</a>
-        <button class="nav-toggle" aria-label="Menu">☰</button>
+        <button class="nav-toggle" aria-label="${t('nav.menu')}">☰</button>
+        <button class="lang-toggle" title="${t('nav.switchTitle')}">${t('nav.switchTo')}</button>
         <div class="nav-links">
             ${links.map(l => `
                 <a href="${l.href}" class="nav-link ${l.id === active ? 'active' : ''}">
@@ -151,5 +152,8 @@ function renderNav(active) {
         </div>`;
     el.querySelector('.nav-toggle').addEventListener('click', () => {
         el.querySelector('.nav-links').classList.toggle('open');
+    });
+    el.querySelector('.lang-toggle').addEventListener('click', () => {
+        setLang(LANG === 'el' ? 'en' : 'el');
     });
 }
