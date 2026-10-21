@@ -141,6 +141,73 @@ function springIn(el, direction = 1, distance = 16) {
     s.set(1);
 }
 
+// ---- Horizontal swipe --------------------------------------
+// Commits on distance OR a quick flick, decided from the first
+// clear horizontal move; vertical drags are left to page scroll.
+function attachSwipe(el, { onLeft, onRight, threshold = 50 } = {}) {
+    if (!el) return;
+    el.style.touchAction = 'pan-y';          // we own horizontal, the browser keeps vertical
+    let start = null;
+    let suppressClickUntil = 0;              // a swipe is not a tap: drop the click right after it
+    el.addEventListener('click', e => {
+        if (performance.now() < suppressClickUntil) { e.stopPropagation(); e.preventDefault(); }
+    }, { capture: true });
+    el.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' || start) return;   // touch/pen only; ignore extra fingers
+        start = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, axis: null };
+    });
+    el.addEventListener('pointermove', e => {
+        if (!start || e.pointerId !== start.id || start.axis) return;
+        const dx = Math.abs(e.clientX - start.x), dy = Math.abs(e.clientY - start.y);
+        if (dx > 10 || dy > 10) start.axis = dx > dy ? 'x' : 'y';   // ~10px hysteresis
+    });
+    const end = e => {
+        if (!start || e.pointerId !== start.id) return;
+        const dx = e.clientX - start.x;
+        const velocity = Math.abs(dx) / (performance.now() - start.t);   // px/ms
+        const horizontal = start.axis === 'x';
+        start = null;
+        if (!horizontal || (Math.abs(dx) < threshold && velocity < 0.4)) return;
+        suppressClickUntil = performance.now() + 350;
+        (dx < 0 ? onLeft : onRight)?.();
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', () => { start = null; });
+}
+
+// ---- Push / pop between pages -------------------------------
+// Opening a sub-page slides it in from the right; the back button
+// slides the parent in from the left (same path in and out).
+const NAVDIR_KEY = 'fittrack-nav-dir';
+document.addEventListener('click', e => {
+    const link = e.target.closest('a[href]');
+    if (!link || link.target || link.closest('.tab-bar') || e.defaultPrevented) return;
+    const dir = link.classList.contains('nav-back') ? -1
+        : (link.classList.contains('nav-card') || link.dataset.push !== undefined) ? 1 : 0;
+    if (!dir) return;
+    try { sessionStorage.setItem(NAVDIR_KEY, JSON.stringify({ dir, at: Date.now() })); } catch { /* ignore */ }
+});
+function playPushPop() {
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(NAVDIR_KEY) || 'null');
+        sessionStorage.removeItem(NAVDIR_KEY);
+        if (saved && Date.now() - saved.at < 2500) springIn(document.querySelector('.container'), saved.dir, 28);
+    } catch { /* storage unavailable */ }
+}
+
+// iOS nav-bar back button: "‹ Exercise" moves from the page into the bar.
+function initBackButton(nav) {
+    const link = document.querySelector('.container > .back-link');
+    if (!link) return;
+    const back = document.createElement('a');
+    back.className = 'nav-back';
+    back.href = link.getAttribute('href');
+    back.innerHTML = `<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2L2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>`;
+    back.querySelector('span').textContent = link.textContent.replace(/^\s*←\s*/, '');
+    nav.prepend(back);
+    document.body.classList.add('has-nav-back');
+}
+
 // ---- Large title -------------------------------------------
 // iOS behaviour: the page's big heading scrolls away and its text
 // appears small in the nav bar; the bar's hairline shows only once

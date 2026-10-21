@@ -41,6 +41,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('week-prev').addEventListener('click', () => changeWeek(-1));
     document.getElementById('week-next').addEventListener('click', () => changeWeek(1));
     document.getElementById('week-today').addEventListener('click', goToToday);
+    // Swipe the week strip to move between weeks, like the Calendar app.
+    if (typeof attachSwipe === 'function') {
+        attachSwipe(document.getElementById('day-tabs'), {
+            onLeft: () => changeWeek(1),
+            onRight: () => changeWeek(-1),
+        });
+    }
 
     await loadNutritionData();
     renderPlan();
@@ -212,12 +219,22 @@ async function changeWeek(delta) {
     if (n < -WEEKS_BACK || n > WEEKS_AHEAD) return;
     try { await loadWeek(next); } catch (err) { showToast(t('common.error', { msg: err.message }), 'error'); }
     renderPlan();
+    slideWeek(delta);
+}
+
+// The new week slides in from the side the user moved towards.
+function slideWeek(direction) {
+    if (typeof springIn !== 'function' || !direction) return;
+    springIn(document.getElementById('day-tabs'), direction);
+    springIn(document.getElementById('meals'), direction);
 }
 
 async function goToToday() {
+    const direction = Math.sign(weeksFromNow(mondayOf(todayISO())) - weeksFromNow(NUT.weekStart));
     selectedDayIdx = dayIndexOf(todayISO());
     await loadWeek(mondayOf(todayISO()));
     renderPlan();
+    slideWeek(direction);
 }
 
 // The plan row for a week, creating an empty one (current targets) if needed.

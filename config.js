@@ -211,6 +211,8 @@ function renderNav(active) {
     // iOS-style bottom tab bar and large-title nav on phones (motion.js).
     if (typeof renderTabBar === 'function') renderTabBar(active);
     if (typeof initLargeTitle === 'function') initLargeTitle(el);
+    if (typeof initBackButton === 'function') initBackButton(el);
+    if (typeof playPushPop === 'function') playPushPop();
     // Running workout timer bar (workout-session.js).
     if (typeof renderSessionBar === 'function') renderSessionBar(el);
 }
