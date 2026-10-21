@@ -162,9 +162,9 @@ async function refreshCharts() {
                 datasets: [{
                     label: t('trk.weight'),
                     data: weightRows.map(w => Number(w.weight)),
-                    borderColor: '#4f46e5',
-                    backgroundColor: 'rgba(79,70,229,.12)',
-                    tension: .35, fill: true, pointRadius: 3,
+                    borderColor: cssVar('--primary'),
+                    backgroundColor: withAlpha(cssVar('--primary'), .14),
+                    tension: .35, fill: true, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5,
                 }],
             },
             options: chartOpts(v => v + ' kg'),
@@ -197,7 +197,8 @@ async function refreshCharts() {
                 datasets: [{
                     label: t('trk.chartNet'),
                     data: nets,
-                    backgroundColor: nets.map(n => n < 0 ? 'rgba(16,185,129,.75)' : 'rgba(239,68,68,.75)'),
+                    backgroundColor: nets.map(n => cssVar(n < 0 ? '--success' : '--danger')),
+                    borderRadius: 6, borderSkipped: false, maxBarThickness: 18,
                 }],
             },
             options: chartOpts(v => v + ' kcal'),
@@ -207,12 +208,26 @@ async function refreshCharts() {
     }
 }
 
+// Charts take their colours from the theme tokens, so they follow light/dark mode.
+function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function withAlpha(hex, a) {
+    const n = parseInt(hex.replace('#', ''), 16);
+    return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+}
+
 function chartOpts(tickFmt) {
+    const muted = cssVar('--text-soft');
+    const grid = cssVar('--border');
     return {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: false, ticks: { callback: tickFmt } } },
+        scales: {
+            x: { grid: { display: false }, border: { display: false }, ticks: { color: muted, maxRotation: 0, autoSkipPadding: 12 } },
+            y: { beginAtZero: false, grid: { color: grid }, border: { display: false }, ticks: { color: muted, callback: tickFmt } },
+        },
     };
 }
 

@@ -141,6 +141,23 @@ function springIn(el, direction = 1, distance = 16) {
     s.set(1);
 }
 
+// ---- Large title -------------------------------------------
+// iOS behaviour: the page's big heading scrolls away and its text
+// appears small in the nav bar; the bar's hairline shows only once
+// content is underneath it.
+function initLargeTitle(nav) {
+    const heading = document.querySelector('.page-head h1');
+    const title = nav.querySelector('.nav-title');
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 2);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    if (!heading || !title || !('IntersectionObserver' in window)) return;
+    new IntersectionObserver(([entry]) => {
+        title.textContent = heading.textContent;       // read late: headings are translated/renamed after load
+        nav.classList.toggle('title-in', !entry.isIntersecting && entry.boundingClientRect.top < 0);
+    }, { rootMargin: `-${nav.offsetHeight}px 0px 0px 0px` }).observe(heading);
+}
+
 // ---- Bottom tab bar ----------------------------------------
 const TABBAR_KEY = 'fittrack-tabbar';
 const TABBAR_TABS = [

@@ -193,6 +193,7 @@ function renderNav(active) {
     if (!el) return;
     el.innerHTML = `
         <a href="index.html" class="nav-brand">\u{1F4AA} FitTrack</a>
+        <span class="nav-title" aria-hidden="true"></span>
         <button class="nav-toggle" aria-label="${t('nav.menu')}">☰</button>
         <button class="lang-toggle" title="${t('nav.switchTitle')}">${t('nav.switchTo')}</button>
         <div class="nav-links">
@@ -207,8 +208,9 @@ function renderNav(active) {
     el.querySelector('.lang-toggle').addEventListener('click', () => {
         setLang(LANG === 'el' ? 'en' : 'el');
     });
-    // iOS-style bottom tab bar on phones (motion.js).
+    // iOS-style bottom tab bar and large-title nav on phones (motion.js).
     if (typeof renderTabBar === 'function') renderTabBar(active);
+    if (typeof initLargeTitle === 'function') initLargeTitle(el);
     // Running workout timer bar (workout-session.js).
     if (typeof renderSessionBar === 'function') renderSessionBar(el);
 }
