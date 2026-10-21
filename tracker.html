@@ -32,7 +32,6 @@
                 <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true"><path d="M2 2l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
         </div>
-        <div class="save-status" id="save-status" aria-live="polite"></div>
 
         <!-- Energy summary: calories left against the daily target -->
         <div class="card energy-card" id="energy-card">
@@ -55,7 +54,11 @@
             <p class="energy-hint" id="bd-hint"></p>
         </div>
 
-        <!-- Metrics -->
+        <!-- Metrics: read-only until Edit; Save Day commits the changes -->
+        <div class="metrics-head">
+            <div class="section-title" data-i18n="trk.entries">📝 Day Log</div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-edit" data-i18n="trk.edit">✏️ Edit</button>
+        </div>
         <form id="log-form" class="metrics" autocomplete="off">
             <label class="metric m-cal metric-wide" for="f-eaten">
                 <span class="m-head"><span class="m-icon">🍽️</span><span class="m-label" data-i18n="common.caloriesEaten">Calories eaten</span></span>
@@ -64,7 +67,7 @@
             </label>
             <label class="metric m-weight" for="f-weight">
                 <span class="m-head"><span class="m-icon">⚖️</span><span class="m-label" data-i18n="trk.thWeight">Weight</span></span>
-                <span class="m-value"><input type="number" id="f-weight" step="0.1" min="0" inputmode="decimal" enterkeyhint="done" placeholder="—"><span class="m-unit">kg</span></span>
+                <span class="m-value"><input type="text" id="f-weight" inputmode="decimal" enterkeyhint="done" placeholder="—"><span class="m-unit">kg</span></span>
                 <span class="m-bar"><span id="weight-bar"></span></span>
                 <span class="m-sub" id="weight-sub"></span>
             </label>
@@ -76,13 +79,13 @@
             </label>
             <label class="metric m-sleep" for="f-sleep">
                 <span class="m-head"><span class="m-icon">🌙</span><span class="m-label" data-i18n="trk.sleepShort">Sleep</span></span>
-                <span class="m-value"><input type="number" id="f-sleep" step="0.1" min="0" inputmode="decimal" enterkeyhint="done" placeholder="0"><span class="m-unit">h</span></span>
+                <span class="m-value"><input type="text" id="f-sleep" inputmode="decimal" enterkeyhint="done" placeholder="0"><span class="m-unit">h</span></span>
                 <span class="m-bar"><span id="sleep-bar"></span></span>
                 <span class="m-sub" id="sleep-sub"></span>
             </label>
             <label class="metric m-water" for="f-water">
                 <span class="m-head"><span class="m-icon">💧</span><span class="m-label" data-i18n="trk.waterShort">Water</span></span>
-                <span class="m-value"><input type="number" id="f-water" step="0.05" min="0" inputmode="decimal" enterkeyhint="done" placeholder="0"><span class="m-unit">L</span></span>
+                <span class="m-value"><input type="text" id="f-water" inputmode="decimal" enterkeyhint="done" placeholder="0"><span class="m-unit">L</span></span>
                 <span class="m-bar"><span id="water-bar"></span></span>
                 <span class="water-add">
                     <button type="button" class="chip" data-water="0.25">+0.25</button>
@@ -93,8 +96,11 @@
                 <label class="m-head" for="f-notes"><span class="m-icon">📝</span><span class="m-label" data-i18n="trk.notes">Notes</span></label>
                 <textarea id="f-notes" rows="2" placeholder="Optional" data-i18n-placeholder="trk.optional"></textarea>
             </div>
+            <div class="save-bar edit-bar" id="edit-bar" hidden>
+                <button type="button" class="btn btn-ghost btn-lg" id="btn-cancel" data-i18n="common.cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-lg" id="btn-save" data-i18n="trk.saveDay">Save Day</button>
+            </div>
         </form>
-        <button type="button" class="btn btn-ghost btn-block delete-day" id="btn-delete-day" hidden data-i18n="trk.deleteDay">Delete this day</button>
 
         <!-- Calories burned -->
         <div class="section-title" data-i18n="trk.burnTitle">🔥 Calories Burned</div>

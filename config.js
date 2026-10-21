@@ -131,6 +131,23 @@ function formatClock(totalSeconds) {
     return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+// Decimal typed by the user: accepts "88.5" and "88,5" (Greek keyboards type a comma).
+// Returns null for empty or invalid input.
+function parseDecimal(value) {
+    const s = String(value ?? '').trim().replace(',', '.');
+    if (s === '') return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+}
+
+// Decimal text fields (type="text" inputmode="decimal") accept only digits and one separator.
+document.addEventListener('input', e => {
+    const el = e.target;
+    if (!el.matches || !el.matches('input[type="text"][inputmode="decimal"]')) return;
+    const clean = el.value.replace(/[^0-9.,]/g, '').replace(/([.,].*)[.,]/g, '$1');
+    if (clean !== el.value) el.value = clean;
+}, true);
+
 function round(n, dp = 0) {
     if (n === null || n === undefined || isNaN(n)) return 0;
     const f = Math.pow(10, dp);

@@ -22,7 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateInput = document.getElementById('f-date');
     dateInput.value = todayISO();
     dateInput.max = todayISO();
-    dateInput.addEventListener('change', () => loadDay());
+    dateInput.addEventListener('change', async () => {
+        if (!(await confirmLeaveEdits())) { dateInput.value = shownDate; return; }
+        loadDay();
+    });
 
     document.getElementById('day-prev').addEventListener('click', () => stepDay(-1));
     document.getElementById('day-next').addEventListener('click', () => stepDay(1));
@@ -30,26 +33,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         attachSwipe(document.getElementById('energy-card'), { onLeft: () => stepDay(1), onRight: () => stepDay(-1) });
     }
 
-    // Entries save on their own: a field commits when it loses focus or Enter is pressed.
+    // Entries are read-only until Edit; Save Day commits them, Cancel puts them back.
     const form = document.getElementById('log-form');
-    form.addEventListener('submit', e => { e.preventDefault(); document.activeElement?.blur(); });
-    form.querySelectorAll('input, textarea').forEach(el => {
-        el.addEventListener('change', scheduleSave);
-        el.addEventListener('input', updateTiles);
+    form.addEventListener('submit', e => { e.preventDefault(); saveEdits(); });
+    form.querySelectorAll('input, textarea').forEach(el =>
+        el.addEventListener('input', () => { updateTiles(); updateEditState(); }));
+    // Tapping a tile while viewing starts editing that field.
+    form.addEventListener('click', e => {
+        if (editMode || e.target.closest('.edit-bar')) return;
+        const tile = e.target.closest('.metric');
+        if (!tile) return;
+        e.preventDefault();
+        setEditMode(true, tile.querySelector('input, textarea'));
     });
     form.querySelectorAll('[data-water]').forEach(btn => btn.addEventListener('click', e => {
         e.preventDefault();
+        if (!editMode) return;
         const input = document.getElementById('f-water');
-        input.value = round(Number(input.value || 0) + Number(btn.dataset.water), 2);
+        input.value = round((parseDecimal(input.value) || 0) + Number(btn.dataset.water), 2);
         updateTiles();
-        scheduleSave();
+        updateEditState();
     }));
-    document.getElementById('btn-delete-day').addEventListener('click', () => deleteDay(dateInput.value));
+    document.getElementById('btn-edit').addEventListener('click', () => setEditMode(true));
+    document.getElementById('btn-cancel').addEventListener('click', cancelEdits);
+    window.addEventListener('beforeunload', e => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+    setEditMode(false);
 
     // Back on this page (back button, another tab, app switch): meals may have been
-    // marked as eaten meanwhile, so reload the day unless an edit is still pending.
+    // marked as eaten meanwhile, so reload the day unless it is being edited.
     const refreshIfIdle = async () => {
-        if (saveTimer || savePromise || document.activeElement?.closest?.('#log-form')) return;
+        if (editMode) return;
         await loadDay();
         await refreshHistory();
     };
@@ -75,7 +88,7 @@ async function stepDay(delta) {
     const input = document.getElementById('f-date');
     const next = addDaysISO(input.value, delta);
     if (next > todayISO()) return;
-    await flushSave();
+    if (!(await confirmLeaveEdits())) return;
     input.value = next;
     await loadDay();
     if (typeof springIn === 'function') {
@@ -111,7 +124,7 @@ async function loadDay() {
     const date = document.getElementById('f-date').value;
     if (!date) return;
     renderDayHeader(date);
-    setSaveStatus('');
+    shownDate = date;
 
     const [dailyRes, weightRes] = await Promise.all([
         db.from('daily_log').select('*').eq('log_date', date).maybeSingle(),
@@ -126,7 +139,6 @@ async function loadDay() {
     document.getElementById('f-sleep').value = d.sleep_hours ?? '';
     document.getElementById('f-water').value = d.water_liters ?? '';
     document.getElementById('f-notes').value = d.notes ?? '';
-    document.getElementById('btn-delete-day').hidden = !dayHasEntry;
 
     updateTiles();
     await refreshBreakdown(date);
@@ -138,7 +150,7 @@ function updateTiles() {
         const chars = Math.max(String(input.value).length, input.placeholder.length, 1);
         input.style.width = (chars + 0.6) + 'ch';
     });
-    const num = id => Number(document.getElementById(id).value || 0);
+    const num = id => parseDecimal(document.getElementById(id).value) || 0;
     const bar = (id, value, goal) => {
         document.getElementById(id).style.transform = `scaleX(${Math.min(1, value / goal)})`;
     };
@@ -158,35 +170,73 @@ function updateTiles() {
         : t('set.toGo', { n: round(weightNow - goal, 1) }));
 }
 
-// ---- Saving -------------------------------------------------
-let saveTimer = null;
-let savePromise = null;
+// ---- Edit / Save --------------------------------------------
+const EDIT_IDS = ['f-eaten', 'f-weight', 'f-steps', 'f-sleep', 'f-water', 'f-notes'];
+let editMode = false;
+let editSnapshot = null;       // field values when Edit was pressed
+let shownDate = '';            // the day currently on screen
 
-function scheduleSave() {
-    clearTimeout(saveTimer);
-    setSaveStatus('saving');
-    saveTimer = setTimeout(() => { saveTimer = null; savePromise = saveDay().finally(() => { savePromise = null; }); }, 400);
+function formValues() {
+    return Object.fromEntries(EDIT_IDS.map(id => [id, document.getElementById(id).value]));
 }
 
-// Before switching days, commit any pending edit for the current one.
-async function flushSave() {
-    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; savePromise = saveDay().finally(() => { savePromise = null; }); }
-    if (savePromise) await savePromise;
+function isDirty() {
+    return editMode && JSON.stringify(formValues()) !== JSON.stringify(editSnapshot);
 }
 
-function setSaveStatus(state) {
-    const el = document.getElementById('save-status');
-    el.className = 'save-status' + (state ? ' ' + state : '');
-    el.textContent = state === 'saving' ? t('trk.saving') : state === 'saved' ? '✓ ' + t('trk.savedShort') : '';
+function setEditMode(on, focusEl = null) {
+    editMode = on;
+    document.getElementById('log-form').classList.toggle('editing', on);
+    EDIT_IDS.forEach(id => { document.getElementById(id).readOnly = !on; });
+    document.getElementById('btn-edit').hidden = on;
+    document.getElementById('edit-bar').hidden = !on;
+    if (on) {
+        editSnapshot = formValues();
+        (focusEl || document.getElementById('f-eaten')).focus();
+    }
+    updateEditState();
 }
 
+// Save Day is enabled once something changed.
+function updateEditState() {
+    document.getElementById('btn-save').disabled = !isDirty();
+}
+
+function cancelEdits() {
+    for (const [id, value] of Object.entries(editSnapshot || {})) document.getElementById(id).value = value;
+    updateTiles();
+    setEditMode(false);
+}
+
+async function saveEdits() {
+    if (!isDirty()) { setEditMode(false); return; }
+    document.activeElement?.blur();
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true;
+    if (await saveDay()) {
+        setEditMode(false);
+        showToast(t('trk.saved'), 'success');
+    } else {
+        updateEditState();
+    }
+}
+
+// Leaving the day with unsaved changes: ask first. Resolves true to go ahead.
+async function confirmLeaveEdits() {
+    if (!isDirty()) { if (editMode) setEditMode(false); return true; }
+    const ok = await confirmToast(t('trk.discardEdits'), { okText: t('trk.discard'), cancelText: t('trk.keepEditing') });
+    if (ok) setEditMode(false);
+    return ok;
+}
+
+// Returns true when everything was saved.
 async function saveDay() {
     const date = document.getElementById('f-date').value;
     if (!date) return;
 
     const val = (id) => {
         const v = document.getElementById(id).value;
-        return v === '' ? null : Number(v);
+        return parseDecimal(v);
     };
     const weight = val('f-weight');
     const notes = document.getElementById('f-notes').value || null;
@@ -234,15 +284,12 @@ async function saveDay() {
             }
         }
 
-        if (date === document.getElementById('f-date').value) {
-            setSaveStatus('saved');
-            document.getElementById('btn-delete-day').hidden = !dayHasEntry;
-            await refreshBreakdown(date);
-        }
+        if (date === document.getElementById('f-date').value) await refreshBreakdown(date);
         await Promise.all([refreshCharts(), refreshHistory()]);
+        return true;
     } catch (err) {
-        setSaveStatus('');
         showToast(t('common.errorSaving', { msg: err.message }), 'error');
+        return false;
     }
 }
 
@@ -478,19 +525,10 @@ async function refreshHistory() {
     }).join('');
 
     body.querySelectorAll('.day-row').forEach(row => row.addEventListener('click', async () => {
-        await flushSave();
+        if (!(await confirmLeaveEdits())) return;
         document.getElementById('f-date').value = row.dataset.date;
         await loadDay();
         body.querySelectorAll('.day-row').forEach(r => r.classList.toggle('current', r === row));
         window.scrollTo({ top: 0, behavior: REDUCED_MOTION?.matches ? 'auto' : 'smooth' });
     }));
-}
-
-async function deleteDay(date) {
-    if (!(await confirmToast(t('trk.confirmDelete', { date: formatDate(date) }), { okText: t('common.delete') }))) return;
-    const { error } = await db.from('daily_log').delete().eq('log_date', date);
-    if (error) { showToast(t('common.error', { msg: error.message }), 'error'); return; }
-    showToast(t('trk.deleted'));
-    await loadDay();
-    await Promise.all([refreshHistory(), refreshCharts()]);
 }

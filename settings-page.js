@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         onFormEdit();
     });
     neat.addEventListener('change', () => {
-        const match = Object.keys(ACTIVITY_NEAT).find(k => ACTIVITY_NEAT[k] === Number(neat.value));
+        const match = Object.keys(ACTIVITY_NEAT).find(k => ACTIVITY_NEAT[k] === parseDecimal(neat.value));
         if (match && match !== activity.value) { activity.value = match; onFormEdit(); }
     });
 
@@ -98,7 +98,7 @@ function formProfile() {
     const p = {};
     for (const [elId, col] of Object.entries(FIELDS)) {
         const raw = document.getElementById(elId).value;
-        p[col] = NUMERIC.has(col) ? (raw === '' ? 0 : Number(raw)) : raw;
+        p[col] = NUMERIC.has(col) ? (parseDecimal(raw) ?? 0) : raw;
     }
     return p;
 }

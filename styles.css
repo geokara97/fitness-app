@@ -1480,7 +1480,6 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 .water-add { display: flex; gap: 6px; }
 .water-add .chip { min-height: 30px; padding: 4px 10px; font-size: .78rem; color: var(--blue); background: color-mix(in srgb, var(--blue) 12%, transparent); }
 .m-notes textarea { background: var(--fill-2); resize: vertical; }
-.delete-day { margin-top: 12px; color: var(--danger-text); }
 
 /* Calories burned: stacked bar + legend */
 .burn-total strong { font-family: var(--font-num); font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
@@ -1889,3 +1888,33 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 /* Only float the save button while there is something to save */
 .save-bar:has(.btn:disabled) { position: static; }
 .mt-input { flex: 0 0 auto; width: 4ch; }
+
+/* ---- Daily Tracker: view / edit modes ---------------------- */
+.metrics-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 26px 0 0; }
+.metrics-head .section-title { margin: 0; }
+.metrics-head + .metrics { margin-top: 12px; }
+/* Viewing: values read like text; tapping a tile starts editing */
+.metrics:not(.editing) .metric { cursor: pointer; }
+.metrics:not(.editing) input, .metrics:not(.editing) textarea { cursor: pointer; caret-color: transparent; }
+.metrics:not(.editing) .water-add { display: none; }
+.metrics:not(.editing) .m-notes textarea { background: transparent; padding-left: 0; resize: none; }
+.metrics:not(.editing) .metric:focus-within { box-shadow: var(--shadow); }
+/* Editing: tiles read as fields */
+.metrics.editing .metric { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tint) 40%, transparent), var(--shadow); }
+.metrics.editing .metric:focus-within { box-shadow: inset 0 0 0 2px var(--tint), var(--shadow); }
+.edit-bar { grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 6px; }
+.edit-bar .btn { flex: 1; }
+.edit-bar .btn-primary { flex: 2; }
+
+/* Floating edit bar: one frosted panel so the tiles behind never show through the buttons */
+.edit-bar {
+    padding: 6px;
+    border-radius: 999px;
+    background: var(--material);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px var(--material-edge);
+}
+.edit-bar .btn-ghost { background: var(--fill); }
+.save-bar.edit-bar .btn { box-shadow: none; }
+.save-bar.edit-bar:has(.btn:disabled) { box-shadow: none; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; }

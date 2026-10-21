@@ -49,7 +49,7 @@
                         <option value="Female" data-i18n="set.female">Female</option>
                     </select></label>
                 <label class="list-row"><span class="lr-label" data-i18n="set.height">Height (cm)</span>
-                    <input class="lr-input" type="number" id="s-height" step="0.1" inputmode="decimal" enterkeyhint="done"></label>
+                    <input class="lr-input" type="text" id="s-height" inputmode="decimal" enterkeyhint="done"></label>
                 <label class="list-row"><span class="lr-label" data-i18n="set.activity">Activity level</span>
                     <select class="lr-input" id="s-activity">
                         <option value="Sedentary (desk job)" data-i18n="act.sedentary">Sedentary (desk job)</option>
@@ -65,11 +65,11 @@
             <div class="section-title" data-i18n="set.goal">🎯 Weight Goal</div>
             <div class="list-group">
                 <label class="list-row"><span class="lr-label" data-i18n="set.start">Start weight (kg)</span>
-                    <input class="lr-input" type="number" id="s-start" step="0.1" inputmode="decimal" enterkeyhint="done"></label>
+                    <input class="lr-input" type="text" id="s-start" inputmode="decimal" enterkeyhint="done"></label>
                 <label class="list-row"><span class="lr-label" data-i18n="set.current">Current weight (kg)</span>
-                    <input class="lr-input" type="number" id="s-current" step="0.1" inputmode="decimal" enterkeyhint="done"></label>
+                    <input class="lr-input" type="text" id="s-current" inputmode="decimal" enterkeyhint="done"></label>
                 <label class="list-row"><span class="lr-label" data-i18n="set.goalW">Goal weight (kg)</span>
-                    <input class="lr-input" type="number" id="s-goal" step="0.1" inputmode="decimal" enterkeyhint="done"></label>
+                    <input class="lr-input" type="text" id="s-goal" inputmode="decimal" enterkeyhint="done"></label>
                 <label class="list-row"><span class="lr-label" data-i18n="set.targetDate">Target date</span>
                     <input class="lr-input" type="date" id="s-goaldate"></label>
             </div>
@@ -106,13 +106,13 @@
             <div class="section-title" data-i18n="set.constants">⚡ Calorie-Burn Constants</div>
             <div class="list-group">
                 <label class="list-row"><span class="lr-label" data-i18n="set.liftRate">Lifting kcal / kg / min</span>
-                    <input class="lr-input" type="number" id="s-lift-rate" step="0.001" inputmode="decimal" enterkeyhint="done"></label>
+                    <input class="lr-input" type="text" id="s-lift-rate" inputmode="decimal" enterkeyhint="done"></label>
                 <label class="list-row"><span class="lr-label" data-i18n="set.liftMin">Default lifting session (min)</span>
                     <input class="lr-input" type="number" id="s-lift-min" step="1" inputmode="numeric" enterkeyhint="done"></label>
                 <label class="list-row"><span class="lr-label" data-i18n="set.walk">Walking kcal / 1,000 steps</span>
                     <input class="lr-input" type="number" id="s-walk" step="1" inputmode="numeric" enterkeyhint="done"></label>
                 <label class="list-row"><span class="lr-label" data-i18n="set.neat">NEAT multiplier</span>
-                    <input class="lr-input" type="number" id="s-neat" step="0.01" inputmode="decimal" enterkeyhint="done"></label>
+                    <input class="lr-input" type="text" id="s-neat" inputmode="decimal" enterkeyhint="done"></label>
             </div>
             <p class="list-footer"><span data-i18n="set.constantsDesc">These drive every burn calculation, including the workout timer.</span>
                 <span data-i18n="set.liftHint">Workout burn = bodyweight × this × minutes timed.</span>
