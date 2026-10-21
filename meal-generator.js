@@ -139,12 +139,19 @@ function favouriteDays(count) {
     return Math.max(1, Math.min(3, Math.round(count / FAVOURITE_WEEKS)));
 }
 
+// Days per week from your 1–10 rating: 9–10 → 3, 7–8 → 2, 5–6 → 1, otherwise 0.
+function ratingDays(rating) {
+    if (!rating) return 0;
+    return rating >= 9 ? 3 : rating >= 7 ? 2 : rating >= 5 ? 1 : 0;
+}
+
 // Spread favourites over the week: { 'day|Meal': favourite }.
 function scheduleFavourites(favourites, rng) {
     const schedule = {};
     const perSlot = {};
-    [...favourites].sort((a, b) => b.count - a.count).forEach(fav => {
-        const want = favouriteDays(fav.count);
+    const daysOf = fav => fav.days || favouriteDays(fav.count);
+    [...favourites].sort((a, b) => daysOf(b) - daysOf(a) || (b.count || 0) - (a.count || 0)).forEach(fav => {
+        const want = daysOf(fav);
         const start = Math.floor(rng() * 7);
         const step = 7 / want;
         for (let k = 0; k < want; k++) {
@@ -303,9 +310,12 @@ function mealSignature(savedMealId, foodIds) {
 }
 
 /**
- * Favourites from the meal log: meals eaten at least twice in the last
- * FAVOURITE_WEEKS weeks, per meal slot, most eaten first.
- * logs:       meal_log rows   savedMeals: [{ meal_id, items: [{ food_id, grams }] }]
+ * Favourites for the generator, each with the number of days per week it gets:
+ *  - meals eaten at least twice in the last FAVOURITE_WEEKS weeks (favouriteDays)
+ *  - saved meals rated 5+ (ratingDays)
+ * A saved meal gets the higher of the two. Rated 1–3 = never auto-added.
+ * logs:       meal_log rows
+ * savedMeals: [{ meal_id, name, meal_slot, rating, items: [{ food_id, grams }] }]
  */
 function favouritesFromLog(logs, savedMeals, todayIso) {
     const since = new Date(todayIso + 'T00:00:00');
@@ -313,28 +323,42 @@ function favouritesFromLog(logs, savedMeals, todayIso) {
     const pad = n => String(n).padStart(2, '0');
     const sinceIso = `${since.getFullYear()}-${pad(since.getMonth() + 1)}-${pad(since.getDate())}`;   // local date, not UTC
     const savedById = Object.fromEntries(savedMeals.map(m => [m.meal_id, m]));
+    const itemsOf = list => (list || []).map(it => ({ food_id: it.food_id, grams: Number(it.grams) }));
 
+    // Count recent eats: saved meals by id, everything else by slot + food set.
+    const savedCounts = {};
     const groups = {};
     logs.filter(l => l.eaten_on > sinceIso && l.eaten_on <= todayIso).forEach(l => {
+        if (l.saved_meal_id && savedById[l.saved_meal_id]) {
+            savedCounts[l.saved_meal_id] = (savedCounts[l.saved_meal_id] || 0) + 1;
+            return;
+        }
         const key = `${l.meal}|${l.signature}`;
         const g = groups[key] || (groups[key] = { meal: l.meal, count: 0, latest: l });
         g.count++;
         if (l.eaten_on >= g.latest.eaten_on) g.latest = l;
     });
 
-    return Object.values(groups)
+    const fromSaved = savedMeals.map(m => {
+        const count = savedCounts[m.meal_id] || 0;
+        const rating = m.rating ? Number(m.rating) : null;
+        const days = rating !== null && rating <= 3
+            ? 0
+            : Math.max(ratingDays(rating), count >= 2 ? favouriteDays(count) : 0);
+        return { meal: m.meal_slot, count, rating, days, savedMealId: m.meal_id, name: m.name, items: itemsOf(m.items) };
+    });
+
+    const fromLog = Object.values(groups)
         .filter(g => g.count >= 2)
-        .map(g => {
-            const saved = g.latest.saved_meal_id && savedById[g.latest.saved_meal_id];
-            const items = saved
-                ? saved.items.map(it => ({ food_id: it.food_id, grams: Number(it.grams) }))
-                : (g.latest.items || []).map(it => ({ food_id: it.food_id, grams: Number(it.grams) }));
-            return { meal: g.meal, count: g.count, savedMealId: saved ? saved.meal_id : null, name: g.latest.name, items };
-        })
-        .sort((a, b) => b.count - a.count);
+        .map(g => ({ meal: g.meal, count: g.count, rating: null, days: favouriteDays(g.count),
+                     savedMealId: null, name: g.latest.name, items: itemsOf(g.latest.items) }));
+
+    return [...fromSaved, ...fromLog]
+        .filter(f => f.days > 0 && f.items.length)
+        .sort((a, b) => b.days - a.days || b.count - a.count);
 }
 
 // Node export for testing; ignored in the browser.
 if (typeof module !== 'undefined') {
-    module.exports = { generateMealPlan, MEAL_TEMPLATES, itemMacros, mealSignature, favouritesFromLog, favouriteDays };
+    module.exports = { generateMealPlan, MEAL_TEMPLATES, itemMacros, mealSignature, favouritesFromLog, favouriteDays, ratingDays };
 }

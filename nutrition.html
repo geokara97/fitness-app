@@ -132,6 +132,14 @@
                             <option value="Dinner" data-i18n="meal.Dinner">Dinner</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="me-rating" data-i18n="meals.rating">Rating</label>
+                        <select id="me-rating">
+                            <option value="" data-i18n="meals.notRated">Not rated</option>
+                            <option>10</option><option>9</option><option>8</option><option>7</option><option>6</option>
+                            <option>5</option><option>4</option><option>3</option><option>2</option><option>1</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group" id="me-plan-fields">
                     <label for="me-from-saved" data-i18n="np.fromSaved">Start from one of my meals</label>
@@ -145,6 +153,20 @@
                     <div class="macro-pills" id="me-totals"></div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block" id="me-save" data-i18n="meals.save">Save meal</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================== Add saved meal to plan days ===================== -->
+    <div class="modal" id="plan-add-modal" role="dialog" aria-modal="true" aria-labelledby="pa-title">
+        <div class="modal-box">
+            <span class="modal-close" id="plan-add-close" aria-label="Close">×</span>
+            <h3 id="pa-title"></h3>
+            <p class="muted text-sm" id="pa-hint" style="margin:-8px 0 12px"></p>
+            <form id="plan-add-form">
+                <div id="pa-days" class="pa-days"></div>
+                <button type="button" class="btn btn-ghost btn-sm" id="pa-all" data-i18n="meals.selectAll">Select all / none</button>
+                <button type="submit" class="btn btn-primary btn-block" id="pa-save" style="margin-top:12px" data-i18n="meals.addToSelected">Add to selected days</button>
             </form>
         </div>
     </div>

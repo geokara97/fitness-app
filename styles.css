@@ -492,6 +492,45 @@ td.num, th.num { text-align: right; }
     background: var(--bg-soft);
 }
 .me-items-label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 6px; }
+
+/* Meal rating (1–10) */
+.rating-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.rating-label { font-size: .82rem; font-weight: 600; color: var(--text-soft); }
+.rating-pills { display: flex; gap: 3px; }
+.rate-pill {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--text-soft);
+    cursor: pointer;
+    padding: 0;
+}
+.rate-pill:hover { border-color: var(--accent); color: var(--accent); }
+.rate-pill.filled { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
+.rate-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (max-width: 420px) { .rate-pill { width: 24px; height: 26px; font-size: .74rem; } }
+
+/* Add saved meal to plan days */
+.pa-days { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.pa-day {
+    display: grid;
+    grid-template-columns: 20px 100px 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    cursor: pointer;
+}
+.pa-day:hover { border-color: var(--primary); }
+.pa-day input { width: auto; margin: 0; }
+.pa-day:has(input:checked) { border-color: var(--primary); background: #eef2ff; }
+.pa-day.already .pa-day-name::after { content: ' ⭐'; }
+.pa-day-name { font-weight: 600; }
 .me-row {
     display: grid;
     grid-template-columns: 1fr 110px 70px 32px;

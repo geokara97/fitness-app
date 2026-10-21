@@ -2,7 +2,7 @@
 -- FitTrack Personal — saved meals & meal log
 -- Run in the Supabase SQL Editor AFTER nutrition_schema.sql (safe to re-run).
 --
---   saved_meals / saved_meal_items : your own meals (foods + grams)
+--   saved_meals / saved_meal_items : your own meals (foods + grams, optional 1–10 rating)
 --   meal_log                       : meals you marked as eaten — the plan
 --                                    generator favours the ones you eat most
 --   meal_plan_items.saved_meal_id  : which plan meals came from a saved meal
@@ -21,6 +21,11 @@ create table if not exists public.saved_meals (
     updated_at timestamptz not null default now()
 );
 create unique index if not exists saved_meals_name_unique on public.saved_meals (lower(name));
+
+-- Your 1–10 rating: higher-rated meals appear on more days of generated plans
+-- (9–10 → ~3 days/week, 7–8 → 2, 5–6 → 1; 1–3 keeps the meal out of generated plans).
+alter table public.saved_meals
+    add column if not exists rating smallint check (rating between 1 and 10);
 
 drop trigger if exists saved_meals_updated_at on public.saved_meals;
 create trigger saved_meals_updated_at

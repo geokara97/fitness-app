@@ -415,10 +415,10 @@ async function onPlanMealClick(e) {
     }
 }
 
-// Replace one meal of the selected plan day (empty items = delete it).
-async function savePlanMeal(slot, items, savedMealId) {
+// Replace one meal of a plan day (empty items = delete it). Defaults to the day on screen.
+async function savePlanMeal(slot, items, savedMealId, { dayIdx = selectedDayIdx, quiet = false } = {}) {
     const planId = NUT.plan.meta.plan_id;
-    const dayNo = selectedDayIdx + 1;
+    const dayNo = dayIdx + 1;
     const { error: dErr } = await db.from('meal_plan_items').delete()
         .eq('plan_id', planId).eq('day_of_week', dayNo).eq('meal', slot);
     if (dErr) { showToast(t('common.error', { msg: dErr.message }), 'error'); return false; }
@@ -432,6 +432,7 @@ async function savePlanMeal(slot, items, savedMealId) {
         const { error } = await db.from('meal_plan_items').insert(rows);
         if (error) { showToast(t('common.errorSaving', { msg: error.message }), 'error'); await reloadPlan(); return false; }
     }
+    if (quiet) return true;   // caller reloads once after several days
     await reloadPlan();
     showToast(items.length ? t('np.mealUpdated') : t('np.mealDeleted'));
     return true;

@@ -24,7 +24,106 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('me-from-saved').addEventListener('change', fillEditorFromSaved);
     document.getElementById('meal-form').addEventListener('submit', saveMealEditor);
+
+    document.getElementById('plan-add-close').addEventListener('click', closeAddToPlan);
+    document.getElementById('plan-add-modal').addEventListener('click', e => {
+        if (e.target.id === 'plan-add-modal') closeAddToPlan();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAddToPlan(); });
+    document.getElementById('pa-all').addEventListener('click', () => {
+        const boxes = [...document.querySelectorAll('input[name="pa-day"]')];
+        const allOn = boxes.every(b => b.checked);
+        boxes.forEach(b => { b.checked = !allOn; });
+    });
+    document.getElementById('plan-add-form').addEventListener('submit', saveAddToPlan);
 });
+
+// ---- Rating -------------------------------------------------
+// What a rating does to generated plans (mirrors ratingDays in meal-generator.js).
+function ratingHint(rating) {
+    if (!rating) return t('meals.notRated');
+    if (rating <= 3) return t('meals.ratingNever');
+    const days = ratingDays(rating);
+    return days ? t('meals.ratingDays', { n: days }) : t('meals.ratingNoExtra');
+}
+
+function ratingRowHtml(m) {
+    const r = m.rating ? Number(m.rating) : 0;
+    const pills = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `
+        <button type="button" class="rate-pill ${n === r ? 'active' : n < r ? 'filled' : ''}" data-act="rate" data-id="${m.meal_id}"
+                data-rating="${n}" aria-pressed="${n === r}" aria-label="${escapeHtml(t('meals.rateAria', { n }))}">${n}</button>`).join('');
+    return `
+        <div class="rating-row">
+            <span class="rating-label">${escapeHtml(t('meals.rating'))}</span>
+            <div class="rating-pills" role="group" aria-label="${escapeHtml(t('meals.rating'))}">${pills}</div>
+            <span class="muted text-sm rating-hint">${escapeHtml(ratingHint(r))}</span>
+        </div>`;
+}
+
+// Tapping the current rating again clears it.
+async function setMealRating(m, rating) {
+    const next = Number(m.rating) === rating ? null : rating;
+    const before = m.rating;
+    m.rating = next;
+    renderMealsTab();
+    const { error } = await db.from('saved_meals').update({ rating: next }).eq('meal_id', m.meal_id);
+    if (error) {
+        m.rating = before;
+        renderMealsTab();
+        showToast(mealSaveError(error), 'error');
+    }
+}
+
+// ---- Add a saved meal to days of the current plan ------------
+let addToPlanMeal = null;
+
+function openAddToPlan(m) {
+    if (!NUT.plan) { showToast(t('meals.needPlan'), 'error'); return; }
+    addToPlanMeal = m;
+    document.getElementById('pa-title').textContent = t('meals.addToPlanTitle', { name: m.name });
+    document.getElementById('pa-hint').textContent = t('meals.addToPlanHint', { meal: t('meal.' + m.meal_slot) });
+    document.getElementById('pa-days').innerHTML = NUT.plan.days.map((d, i) => {
+        const current = d.meals.find(x => x.name === m.meal_slot);
+        const saved = current && current.savedMealId && NUT.savedMeals.find(s => s.meal_id === current.savedMealId);
+        const already = current && current.savedMealId === m.meal_id;
+        const now = !current ? t('meals.slotEmpty')
+            : `${round(macrosOf(current.items).kcal)} kcal${saved ? ' · ⭐ ' + saved.name : ''}`;
+        return `
+            <label class="pa-day ${already ? 'already' : ''}">
+                <input type="checkbox" name="pa-day" value="${i}">
+                <span class="pa-day-name">${escapeHtml(t('day.' + d.day))}</span>
+                <span class="muted text-sm">${escapeHtml(already ? t('meals.alreadyThere') : t('meals.currently', { what: now }))}</span>
+            </label>`;
+    }).join('');
+    document.getElementById('plan-add-modal').classList.add('show');
+}
+
+function closeAddToPlan() {
+    document.getElementById('plan-add-modal').classList.remove('show');
+    addToPlanMeal = null;
+}
+
+async function saveAddToPlan(e) {
+    e.preventDefault();
+    const m = addToPlanMeal;
+    if (!m) return;
+    const days = [...document.querySelectorAll('input[name="pa-day"]:checked')].map(c => Number(c.value));
+    if (!days.length) { showToast(t('meals.pickDays'), 'error'); return; }
+    const items = m.items.filter(it => NUT.foodsById[it.food_id])
+        .map(it => ({ food_id: it.food_id, grams: Number(it.grams) }));
+    if (!items.length) { showToast(t('meals.needFood'), 'error'); return; }
+
+    const btn = document.getElementById('pa-save');
+    btn.disabled = true;
+    let ok = 0;
+    for (const dayIdx of days) {
+        if (await savePlanMeal(m.meal_slot, items, m.meal_id, { dayIdx, quiet: true })) ok++;
+    }
+    btn.disabled = false;
+    closeAddToPlan();
+    await reloadPlan();
+    if (ok) showToast(t('meals.addedToDays', { name: m.name, n: ok }));
+}
 
 // ---- Helpers ------------------------------------------------
 // [{ food_id, grams }] -> [{ food, grams }] (drops foods that no longer exist)
@@ -118,11 +217,13 @@ function savedMealCard(m) {
                 <div class="macro-pills">${macroPillsHtml(macrosOf(items))}</div>
             </div>
             <ul class="meal-items">${items.map(it => `<li>${itemLabel(it)}</li>`).join('') || `<li class="muted">—</li>`}</ul>
+            ${ratingRowHtml(m)}
             <div class="meal-actions">
                 <button type="button" class="btn btn-sm eat-btn ${eaten ? 'eaten' : ''}" data-act="eat" data-id="${m.meal_id}"
                         aria-pressed="${eaten}">${escapeHtml(t(eaten ? 'meals.eatenToday' : 'meals.ateToday'))}</button>
                 <span class="muted text-sm">${escapeHtml(count ? t('meals.timesEaten', { n: count }) : t('meals.neverEaten'))}</span>
                 <span class="meal-icon-actions">
+                    <button type="button" class="btn btn-ghost btn-sm" data-act="plan" data-id="${m.meal_id}">${escapeHtml(t('meals.addToPlan'))}</button>
                     <button type="button" class="pref-btn active" data-act="edit" data-id="${m.meal_id}" title="${escapeHtml(t('meals.edit'))}">✏️</button>
                     <button type="button" class="icon-btn" data-act="delete" data-id="${m.meal_id}" title="${escapeHtml(t('common.delete'))}">🗑</button>
                 </span>
@@ -141,8 +242,10 @@ async function onSavedMealClick(e) {
         renderMealsTab();
         if (NUT.plan) renderDay();
     }
+    if (btn.dataset.act === 'rate') await setMealRating(m, Number(btn.dataset.rating));
+    if (btn.dataset.act === 'plan') openAddToPlan(m);
     if (btn.dataset.act === 'edit') {
-        openMealEditor({ mode: 'saved', mealId: m.meal_id, name: m.name, slot: m.meal_slot, items: m.items });
+        openMealEditor({ mode: 'saved', mealId: m.meal_id, name: m.name, slot: m.meal_slot, rating: m.rating, items: m.items });
     }
     if (btn.dataset.act === 'delete') {
         if (!(await confirmToast(t('meals.confirmDelete', { name: m.name }), { okText: t('common.delete') }))) return;
@@ -209,6 +312,7 @@ function openMealEditor(opts) {
     document.getElementById('me-name').required = isSaved;
     document.getElementById('me-name').value = opts.name || '';
     document.getElementById('me-slot').value = opts.slot || 'Lunch';
+    document.getElementById('me-rating').value = opts.rating ? String(opts.rating) : '';
 
     // Plan mode: start from one of your meals (same meal type listed first).
     const fromSaved = document.getElementById('me-from-saved');
@@ -260,15 +364,16 @@ async function saveMealEditor(e) {
 
         const name = document.getElementById('me-name').value.trim();
         const slot = document.getElementById('me-slot').value;
+        const rating = Number(document.getElementById('me-rating').value) || null;
         if (!name) return;
         let mealId = mealEditor.mealId;
         if (mealId) {
-            const { error } = await db.from('saved_meals').update({ name, meal_slot: slot }).eq('meal_id', mealId);
+            const { error } = await db.from('saved_meals').update({ name, meal_slot: slot, rating }).eq('meal_id', mealId);
             if (error) throw error;
             const { error: dErr } = await db.from('saved_meal_items').delete().eq('meal_id', mealId);
             if (dErr) throw dErr;
         } else {
-            const { data, error } = await db.from('saved_meals').insert([{ name, meal_slot: slot }]).select().single();
+            const { data, error } = await db.from('saved_meals').insert([{ name, meal_slot: slot, rating }]).select().single();
             if (error) throw error;
             mealId = data.meal_id;
         }
@@ -285,8 +390,13 @@ async function saveMealEditor(e) {
         else if (NUT.plan) renderDay();
         showToast(t(wasEdit ? 'meals.updated' : 'meals.saved', { name }));
     } catch (err) {
-        showToast(err.code === '23505' ? t('meals.duplicate') : t('common.errorSaving', { msg: err.message }), 'error');
+        showToast(err.code === '23505' ? t('meals.duplicate') : mealSaveError(err), 'error');
     } finally {
         btn.disabled = false;
     }
+}
+
+// The rating column arrives with the updated meals_schema.sql.
+function mealSaveError(err) {
+    return /rating/i.test(err.message || '') ? t('meals.ratingDbMissing') : t('common.errorSaving', { msg: err.message });
 }
