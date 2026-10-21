@@ -12,7 +12,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ---- USDA FoodData Central (food macro lookup) ---------------
 // 'DEMO_KEY' works but is limited to ~30 searches/hour. Get a free
 // personal key at https://fdc.nal.usda.gov/api-key-signup and paste it here.
-const USDA_API_KEY = 'DEMO_KEY';
+const USDA_API_KEY = 'GhmLrKJgchfcG7fFFqw7jDdqCp6cj7cdt6zPgzHR';
 
 // 7,700 kcal is roughly the energy in 1 kg of body fat.
 const KCAL_PER_KG_FAT = 7700;
