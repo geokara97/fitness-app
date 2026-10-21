@@ -32,6 +32,8 @@ let profile = null;
 let savedSnapshot = '';          // form state as last saved, to know when there are changes
 let savedMode = 'auto';
 let macroMode = getMacroMode();
+let kcalMode = getKcalMode();      // 'auto' = from goal weight + target date
+let savedKcalMode = kcalMode;
 
 document.addEventListener('DOMContentLoaded', async () => {
     renderNav('settings');
@@ -44,13 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof attachTabIndicator === 'function') attachTabIndicator(document.querySelector('.lang-seg'), '.main-tab');
 
     try {
-        profile = await loadProfile();
+        // Latest weigh-in as current weight, and auto calories/macros brought up to date.
+        profile = await syncAutoTargets();
     } catch (e) { return; }
-
-    // The latest weigh-in is the current weight everywhere (Home, Tracker, here).
-    const { data: latest } = await db.from('weight_log')
-        .select('weight').order('log_date', { ascending: false }).limit(1);
-    if (latest && latest.length) profile.current_weight = latest[0].weight;
 
     for (const [elId, col] of Object.entries(FIELDS)) {
         const el = document.getElementById(elId);
@@ -72,10 +70,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.querySelectorAll('[data-step]').forEach(btn => btn.addEventListener('click', () => {
+        // Stepping your own number means Custom calories.
+        if (kcalMode === 'auto') setKcalModeUI('custom', { initial: true });
         const input = document.getElementById('s-kcal');
         input.value = Math.max(800, Number(input.value || 0) + Number(btn.dataset.step));
         onFormEdit();
     }));
+
+    // Calories mode: From goal (worked out) / Custom (typed in)
+    document.querySelectorAll('#kcal-mode .main-tab').forEach(tab =>
+        tab.addEventListener('click', () => setKcalModeUI(tab.dataset.mode)));
+    setKcalModeUI(kcalMode, { initial: true });
+    if (typeof attachTabIndicator === 'function') attachTabIndicator(document.getElementById('kcal-mode'), '.main-tab');
 
     // Macro mode: Auto (worked out) / Custom (typed in)
     document.querySelectorAll('#macro-mode .main-tab').forEach(tab =>
@@ -83,22 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     setMode(macroMode, { initial: true });
     if (typeof attachTabIndicator === 'function') attachTabIndicator(document.getElementById('macro-mode'), '.main-tab');
 
-    // Auto macros follow calories and bodyweight. If the stored ones are out of date
-    // (e.g. a new weigh-in since), store the worked-out values now, so Nutrition
-    // uses exactly what this page shows.
-    if (macroMode === 'auto') {
-        const p = formProfile();
-        const stale = ['protein_target', 'carbs_target', 'fat_target'].some(k => Number(profile[k]) !== p[k]);
-        if (stale) {
-            const { error } = await db.from('profile').update({
-                protein_target: p.protein_target, carbs_target: p.carbs_target, fat_target: p.fat_target,
-            }).eq('id', 1);
-            if (!error) clearProfileCache();
-        }
-    }
-
     savedSnapshot = snapshot();
     savedMode = macroMode;
+    savedKcalMode = kcalMode;
     updateDirty();
 
     document.getElementById('settings-form').addEventListener('submit', save);
@@ -118,7 +111,7 @@ function formProfile() {
 }
 
 function snapshot() { return JSON.stringify(formProfile()); }
-function isDirty() { return snapshot() !== savedSnapshot || macroMode !== savedMode; }
+function isDirty() { return snapshot() !== savedSnapshot || macroMode !== savedMode || kcalMode !== savedKcalMode; }
 function updateDirty() {
     const btn = document.getElementById('btn-save');
     btn.disabled = !isDirty();
@@ -127,6 +120,20 @@ function updateDirty() {
 function onFormEdit() {
     recompute();
     updateDirty();
+}
+
+function setKcalModeUI(mode, { initial = false } = {}) {
+    kcalMode = mode;
+    document.querySelectorAll('#kcal-mode .main-tab').forEach(tab =>
+        tab.classList.toggle('active', tab.dataset.mode === mode));
+    // From goal: the number is worked out, so it is read-only and the stepper hides.
+    document.getElementById('s-kcal').readOnly = mode === 'auto';
+    document.querySelector('.stepper').classList.toggle('locked', mode === 'auto');
+    recompute();
+    if (!initial) {
+        updateDirty();
+        if (mode === 'custom') document.getElementById('s-kcal').focus();
+    }
 }
 
 function setMode(mode, { initial = false } = {}) {
@@ -143,8 +150,16 @@ function setMode(mode, { initial = false } = {}) {
 }
 
 function recompute() {
-    const p = formProfile();
+    let p = formProfile();
     const w = p.current_weight || p.start_weight || 90;
+
+    // From goal: calories that reach the goal weight by the target date.
+    const goal = calcGoalCalories(p, w);
+    if (kcalMode === 'auto' && goal.ok) {
+        document.getElementById('s-kcal').value = goal.kcal;
+        p = formProfile();
+    }
+    renderGoalRule(goal, p, w);
 
     // Auto: macros follow the calorie target and bodyweight (calcMacroTargets in config.js).
     if (macroMode === 'auto') {
@@ -171,6 +186,41 @@ function recompute() {
     defEl.classList.toggle('bad', deficit <= 0);
 
     renderProfileHeader(p, w);
+}
+
+// The sum behind the calorie target, plus any warning.
+function renderGoalRule(g, p, w) {
+    const el = document.getElementById('goal-rule');
+    el.classList.remove('warn');
+    if (kcalMode === 'custom') {
+        // Custom: still show what the goal would need, for comparison.
+        el.textContent = g.ok && !g.reached ? t('set.goalHint', { kcal: g.kcal.toLocaleString(LOCALE) }) : '';
+        return;
+    }
+    if (!g.ok) {
+        el.textContent = t(g.reason === 'pastDate' ? 'set.goalPast' : 'set.goalNoDate');
+        el.classList.add('warn');
+        return;
+    }
+    if (g.reached) { el.textContent = t('set.goalReachedKcal', { kcal: g.kcal.toLocaleString(LOCALE) }); return; }
+    const fmtDate = iso => new Date(iso + 'T00:00:00').toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' });
+    let text = t('set.goalCalc', {
+        from: round(w, 1), to: round(Number(p.goal_weight), 1), date: fmtDate(p.goal_date), days: g.days,
+        kg: round(g.toLose, 1), total: Math.round(g.toLose * KCAL_PER_KG_FAT).toLocaleString(LOCALE),
+        deficit: Math.round(g.deficit).toLocaleString(LOCALE), tdee: Math.round(g.tdee).toLocaleString(LOCALE),
+        kcal: g.kcal.toLocaleString(LOCALE), rate: round(g.weeklyLoss, 2),
+    });
+    if (g.clamped) {
+        const reach = new Date(todayISO() + 'T00:00:00');
+        reach.setDate(reach.getDate() + (g.reachDays || 0));
+        const reachIso = `${reach.getFullYear()}-${String(reach.getMonth() + 1).padStart(2, '0')}-${String(reach.getDate()).padStart(2, '0')}`;
+        text += ' ' + t('set.goalFloor', { raw: Math.round(g.rawKcal).toLocaleString(LOCALE), floor: g.floor.toLocaleString(LOCALE), date: fmtDate(reachIso) });
+        el.classList.add('warn');
+    } else if (g.aggressive) {
+        text += ' ' + t('set.goalAggressive');
+        el.classList.add('warn');
+    }
+    el.textContent = text;
 }
 
 function renderMacros(p, weight) {
@@ -233,9 +283,11 @@ async function save(e) {
         }
 
         setMacroMode(macroMode);
+        setKcalMode(kcalMode);
         clearProfileCache();
         savedSnapshot = snapshot();
         savedMode = macroMode;
+        savedKcalMode = kcalMode;
         showToast(t('set.saved'), 'success');
     } catch (err) {
         showToast(t('common.errorSaving', { msg: err.message }), 'error');

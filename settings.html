@@ -78,6 +78,13 @@
             <!-- Nutrition targets: calories set by you, macros worked out from them -->
             <div class="section-title" data-i18n="set.nutrition">🥗 Nutrition Targets</div>
             <div class="list-group">
+                <div class="list-row macro-mode-row">
+                    <span class="lr-label" data-i18n="set.kcalMode">Daily calories</span>
+                    <div class="main-tabs mini-seg" id="kcal-mode" role="tablist">
+                        <button type="button" class="main-tab" data-mode="auto" role="tab" data-i18n="set.kcalAuto">From goal</button>
+                        <button type="button" class="main-tab" data-mode="custom" role="tab" data-i18n="set.kcalCustom">Custom</button>
+                    </div>
+                </div>
                 <div class="list-row kcal-row">
                     <label class="lr-label" for="s-kcal" data-i18n="set.kcal">Daily calorie target</label>
                     <div class="stepper">
@@ -100,6 +107,7 @@
                     <div class="macro-bar" aria-hidden="true"><span class="mb-p" id="mb-p"></span><span class="mb-c" id="mb-c"></span><span class="mb-f" id="mb-f"></span></div>
                 </div>
             </div>
+            <p class="list-footer" id="goal-rule"></p>
             <p class="list-footer" id="macro-rule"></p>
 
             <!-- Burn rates -->

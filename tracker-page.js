@@ -16,7 +16,7 @@ const RING_LENGTH = 2 * Math.PI * 52;      // circumference of the energy ring (
 document.addEventListener('DOMContentLoaded', async () => {
     renderNav('tracker');
     try {
-        profile = await loadProfile();
+        profile = await syncAutoTargets();     // auto calories/macros up to date
     } catch (e) { return; }
 
     const dateInput = document.getElementById('f-date');
@@ -278,19 +278,10 @@ async function saveDay() {
                 : await db.from('weight_log').delete().eq('log_date', date);
             if (wErr) throw wErr;
 
-            // Keep profile.current_weight in sync with the most recent weigh-in.
-            const { data: latest } = await db.from('weight_log')
-                .select('weight').order('log_date', { ascending: false }).limit(1);
-            if (latest && latest.length) {
-                // New bodyweight: with Auto macros, protein (2.25 g/kg) and the carbs/fat
-                // that fill the target follow it. Custom macros are left alone.
-                await db.from('profile').update({
-                    current_weight: latest[0].weight,
-                    ...(getMacroMode() === 'auto' ? calcMacroTargets(profile.daily_calorie_target, latest[0].weight) : {}),
-                }).eq('id', 1);
-                clearProfileCache();
-                profile = await loadProfile();
-            }
+            // New bodyweight: current weight follows the latest weigh-in, and auto
+            // calories (goal) and auto macros (2.25 g/kg protein…) follow it.
+            clearProfileCache();
+            profile = await syncAutoTargets();
         }
 
         if (date === document.getElementById('f-date').value) await refreshBreakdown(date);

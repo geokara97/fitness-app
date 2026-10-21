@@ -146,7 +146,7 @@ function profileTargets() {
 }
 
 async function loadNutritionData() {
-    try { NUT.profile = await loadProfile(); } catch { NUT.profile = null; }
+    try { NUT.profile = await syncAutoTargets(); } catch { NUT.profile = null; }
     try {
         const [foodsRes, prefsRes, plansRes] = await Promise.all([
             db.from('foods').select('*').order('name_en'),
@@ -306,7 +306,7 @@ async function goToToday() {
 async function getOrCreatePlanForWeek(weekStart) {
     if (NUT.plansByWeek[weekStart]) return NUT.plansByWeek[weekStart];
     clearProfileCache();
-    const p = await loadProfile();
+    const p = await syncAutoTargets();
     const { data, error } = await db.from('meal_plans').insert([{
         week_start: weekStart,
         kcal_target: Number(p.daily_calorie_target), protein_target: Number(p.protein_target),
@@ -566,7 +566,7 @@ async function generatePlan() {
     const week = mondayOf(todayISO());
     try {
         clearProfileCache();
-        const p = await loadProfile();
+        const p = await syncAutoTargets();
         const targets = {
             kcal: Number(p.daily_calorie_target),
             protein: Number(p.protein_target),

@@ -83,6 +83,76 @@ function getMacroMode() {
 function setMacroMode(mode) {
     try { localStorage.setItem(MACRO_MODE_KEY, mode); } catch { /* storage unavailable */ }
 }
+// ---- Daily calories from the weight goal -----------------------
+// 'auto' = worked out from goal weight + target date; 'custom' = typed in.
+// Kept in this browser like the macro mode.
+const KCAL_MODE_KEY = 'fittrack-kcal-mode';
+function getKcalMode() {
+    try { return localStorage.getItem(KCAL_MODE_KEY) === 'custom' ? 'custom' : 'auto'; } catch { return 'auto'; }
+}
+function setKcalMode(mode) {
+    try { localStorage.setItem(KCAL_MODE_KEY, mode); } catch { /* storage unavailable */ }
+}
+
+// Never plan below these, whatever the goal asks for.
+const MIN_DAILY_KCAL = { Male: 1500, Female: 1200 };
+
+// Average daily burn for planning: resting + 10,000 steps + 5 workouts a week.
+function calcAverageTdee(weightKg, p) {
+    return calcRestingBurn(weightKg, p) + calcStepsBurn(10000, weightKg, p)
+        + calcWorkoutBurn(weightKg, Number(p.lifting_default_min), p) * 5 / 7;
+}
+
+// Calories a day to reach the goal weight by the target date
+// (1 kg of fat ≈ 7,700 kcal). Returns { ok, kcal, ... } or { ok: false, reason }.
+function calcGoalCalories(p, weightKg, todayIso = todayISO()) {
+    const tdee = calcAverageTdee(weightKg, p);
+    const goal = Number(p.goal_weight);
+    if (!p.goal_date || !goal) return { ok: false, reason: 'noDate', tdee };
+    const days = Math.round((new Date(p.goal_date + 'T00:00:00') - new Date(todayIso + 'T00:00:00')) / 86400000);
+    if (days <= 0) return { ok: false, reason: 'pastDate', tdee, days };
+    const toLose = weightKg - goal;
+    if (toLose <= 0) return { ok: true, reached: true, kcal: Math.round(tdee / 10) * 10, tdee, days, toLose: 0, deficit: 0 };
+
+    const deficit = toLose * KCAL_PER_KG_FAT / days;             // needed every day
+    const rawKcal = tdee - deficit;
+    const floor = MIN_DAILY_KCAL[p.gender] || MIN_DAILY_KCAL.Female;
+    const kcal = Math.max(floor, Math.round(rawKcal / 10) * 10);
+    const actualDeficit = tdee - kcal;
+    const weeklyLoss = actualDeficit * 7 / KCAL_PER_KG_FAT;
+    const clamped = rawKcal < floor;
+    // At the floor the goal takes longer: when you would get there.
+    const reachDays = actualDeficit > 0 ? Math.ceil(toLose * KCAL_PER_KG_FAT / actualDeficit) : null;
+    return { ok: true, kcal, rawKcal, tdee, days, toLose, deficit, floor, clamped,
+             weeklyLoss, aggressive: weeklyLoss > weightKg * 0.01, reachDays };
+}
+
+// Auto targets (calories and/or macros) can go stale as days pass and weigh-ins
+// come in. Bring the stored profile up to date and return it.
+async function syncAutoTargets() {
+    const p = await loadProfile();
+    const { data: latest } = await db.from('weight_log')
+        .select('weight').order('log_date', { ascending: false }).limit(1);
+    const weight = latest && latest.length ? Number(latest[0].weight) : Number(p.current_weight);
+
+    const patch = {};
+    if (weight && Number(p.current_weight) !== weight) patch.current_weight = weight;
+    let kcal = Number(p.daily_calorie_target);
+    if (getKcalMode() === 'auto') {
+        const g = calcGoalCalories(p, weight);
+        if (g.ok && g.kcal !== kcal) { kcal = g.kcal; patch.daily_calorie_target = kcal; }
+    }
+    if (getMacroMode() === 'auto') {
+        const m = calcMacroTargets(kcal, weight);
+        for (const [k, v] of Object.entries(m)) if (Number(p[k]) !== v) patch[k] = v;
+    }
+    if (!Object.keys(patch).length) return p;
+    const { error } = await db.from('profile').update(patch).eq('id', 1);
+    if (error) return p;
+    clearProfileCache();
+    return loadProfile();
+}
+
 function calcMacroTargets(kcal, weightKg) {
     kcal = Number(kcal) || 0;
     weightKg = Number(weightKg) || 0;

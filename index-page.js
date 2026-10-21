@@ -5,7 +5,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     renderNav('dashboard');
     try {
-        const p = await loadProfile();
+        const p = await syncAutoTargets();     // auto calories/macros up to date
         await Promise.all([
             renderGoal(p),
             renderToday(p),
