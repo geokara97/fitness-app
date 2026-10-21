@@ -147,7 +147,7 @@ async function loadDay() {
 // Goal bars and sub-lines on the metric tiles, updated as you type.
 function updateTiles() {
     document.querySelectorAll('.m-value input').forEach(input => {
-        const chars = Math.max(String(input.value).length, input.placeholder.length, 1);
+        const chars = Math.max(String(input.value).length, input.placeholder.length, 3);   // room to tap even when empty
         input.style.width = (chars + 0.6) + 'ch';
     });
     const num = id => parseDecimal(document.getElementById(id).value) || 0;
@@ -192,7 +192,11 @@ function setEditMode(on, focusEl = null) {
     document.getElementById('edit-bar').hidden = !on;
     if (on) {
         editSnapshot = formValues();
-        (focusEl || document.getElementById('f-eaten')).focus();
+        // Focus only now that the field is editable: a field that took focus while
+        // read-only would not bring up the phone keyboard, so re-focus it if needed.
+        const el = focusEl || document.getElementById('f-eaten');
+        if (document.activeElement === el) el.blur();
+        el.focus();
     }
     updateEditState();
 }

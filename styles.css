@@ -1918,3 +1918,7 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 .edit-bar .btn-ghost { background: var(--fill); }
 .save-bar.edit-bar .btn { box-shadow: none; }
 .save-bar.edit-bar:has(.btn:disabled) { box-shadow: none; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0; }
+
+/* Viewing: taps land on the tile (which starts editing), never on a read-only field
+   — a read-only field taking focus would leave the phone keyboard closed. */
+.metrics:not(.editing) input, .metrics:not(.editing) textarea { pointer-events: none; }
