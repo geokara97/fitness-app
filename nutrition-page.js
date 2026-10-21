@@ -289,17 +289,21 @@ function currentDayView() {
 function renderPlan() {
     const banner = document.getElementById('plan-banner-text');
     const genBtn = document.getElementById('btn-generate');
+    const isCurrentWeek = weeksFromNow(NUT.weekStart) === 0;
     genBtn.disabled = !NUT.dbReady;
+    genBtn.hidden = !isCurrentWeek;   // plans are only generated for the current week
 
     if (NUT.plan) {
         const m = NUT.plan.meta;
         document.getElementById('np-title').textContent = t('np.myPlanTitle');
         document.getElementById('np-subtitle').textContent = t('np.myPlanSubtitle', { kcal: m.kcal_target });
         setTargets(m.kcal_target, m.protein_target, m.carbs_target, m.fat_target);
-        banner.textContent = t('np.bannerWeekPlan', {
-            week: weekLabel(NUT.weekStart),
-            date: new Date(m.created_at).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' }),
-        });
+        banner.textContent = isCurrentWeek
+            ? t('np.bannerWeekPlan', {
+                week: weekLabel(NUT.weekStart),
+                date: new Date(m.created_at).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' }),
+            })
+            : t('np.bannerOtherWeekPlan', { week: weekLabel(NUT.weekStart) });
         genBtn.textContent = t('np.regenerate');
         document.getElementById('np-notes').innerHTML =
             [planText(NUTRITION_PLAN.meta.notes[0]), t('np.noteGenerated')].map(n => `<li>${escapeHtml(n)}</li>`).join('');
@@ -308,7 +312,8 @@ function renderPlan() {
         document.getElementById('np-title').textContent = planText(m.title);
         document.getElementById('np-subtitle').textContent = planText(m.subtitle);
         setTargets(m.calories, m.protein, m.carbs, m.fat);
-        banner.textContent = NUT.dbReady ? t('np.bannerNoWeekPlan', { week: weekLabel(NUT.weekStart) }) : t('foods.dbMissing');
+        banner.textContent = !NUT.dbReady ? t('foods.dbMissing')
+            : t(isCurrentWeek ? 'np.bannerNoWeekPlan' : 'np.bannerOtherWeekNoPlan', { week: weekLabel(NUT.weekStart) });
         genBtn.textContent = t('np.generate');
         document.getElementById('np-notes').innerHTML =
             m.notes.map(n => `<li>${escapeHtml(planText(n))}</li>`).join('');
@@ -432,11 +437,12 @@ function renderTips() {
         NUTRITION_PLAN.tips.map((tip, i) => `<li><strong>${i + 1}.</strong> ${escapeHtml(planText(tip))}</li>`).join('');
 }
 
-// ---- Generate (for the week on screen) -----------------------
+// ---- Generate (always the current week) ----------------------
 async function generatePlan() {
     if (!NUT.dbReady) { showToast(t('foods.dbMissing'), 'error'); return; }
     const btn = document.getElementById('btn-generate');
     btn.disabled = true;
+    const week = mondayOf(todayISO());
     try {
         clearProfileCache();
         const p = await loadProfile();
@@ -460,7 +466,7 @@ async function generatePlan() {
         }
 
         // One plan per week: reuse this week's row (fresh targets), replace its meals.
-        const existing = NUT.plansByWeek[NUT.weekStart];
+        const existing = NUT.plansByWeek[week];
         let plan;
         if (existing) {
             const { data, error } = await db.from('meal_plans').update({
@@ -473,20 +479,21 @@ async function generatePlan() {
             plan = data;
         } else {
             const { data, error } = await db.from('meal_plans').insert([{
-                week_start: NUT.weekStart,
+                week_start: week,
                 kcal_target: targets.kcal, protein_target: targets.protein,
                 carbs_target: targets.carbs, fat_target: targets.fat,
             }]).select().single();
             if (error) throw error;
             plan = data;
         }
-        NUT.plansByWeek[NUT.weekStart] = plan;
+        NUT.plansByWeek[week] = plan;
 
         const { error: iErr } = await db.from('meal_plan_items')
             .insert(items.map(it => ({ ...it, plan_id: plan.plan_id })));
         if (iErr) throw iErr;
 
-        await reloadPlan();
+        await loadWeek(week);      // show the plan just generated
+        renderPlan();
         showToast(missing.includes('vegetables') ? t('np.generatedNoVeg')
             : favouritesPlaced ? t('np.generatedFav', { n: favouritesPlaced })
             : t('np.generated'));

@@ -499,6 +499,34 @@ td.num, th.num { text-align: right; }
 }
 .me-items-label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 6px; }
 
+/* My Meals: compact rows that expand on click */
+.saved-meal { padding: 0; overflow: hidden; }
+.card.saved-meal + .card.saved-meal { margin-top: 8px; }
+.saved-meal-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px 10px;
+    flex-wrap: wrap;
+    padding: 11px 14px;
+    background: none;
+    border: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.saved-meal-head:hover { background: var(--bg-soft); }
+.saved-meal-head:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.sm-name { font-weight: 700; font-size: .98rem; flex: 1 1 140px; min-width: 0; }
+.sm-rating { font-size: .78rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.saved-meal-head .macro-pills { gap: 4px; }
+.saved-meal-head .macro-pill { font-size: .7rem; padding: 2px 6px; }
+.sm-chevron { color: var(--text-soft); transition: transform .2s; margin-left: auto; }
+.saved-meal.open .sm-chevron { transform: rotate(180deg); }
+.saved-meal-body { padding: 0 14px 12px; border-top: 1px solid var(--border); }
+.saved-meal-body .meal-items { margin-top: 10px; }
+
 /* Meal rating (1–10) */
 .rating-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 .rating-label { font-size: .82rem; font-weight: 600; color: var(--text-soft); }
@@ -519,6 +547,14 @@ td.num, th.num { text-align: right; }
 .rate-pill.filled { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
 .rate-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 @media (max-width: 420px) { .rate-pill { width: 24px; height: 26px; font-size: .74rem; } }
+.rating-input {
+    width: 72px;
+    padding: 4px 8px;
+    font-weight: 700;
+    text-align: center;
+    border-color: #fdba74;
+}
+.rating-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(249,115,22,.15); }
 
 /* Add saved meal to plan days */
 .pa-days { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }

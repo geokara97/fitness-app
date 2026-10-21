@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-new-meal').addEventListener('click', () =>
         openMealEditor({ mode: 'saved', slot: 'Lunch', items: [] }));
     document.getElementById('saved-meals-list').addEventListener('click', onSavedMealClick);
+    document.getElementById('saved-meals-list').addEventListener('change', onRatingInput);
 
     document.getElementById('meal-modal-close').addEventListener('click', closeMealEditor);
     document.getElementById('meal-modal').addEventListener('click', e => {
@@ -51,20 +52,42 @@ function ratingHint(rating) {
 
 function ratingRowHtml(m) {
     const r = m.rating ? Number(m.rating) : 0;
+    // Whole-number buttons for a quick tap; the field takes decimals (e.g. 7.5).
     const pills = Array.from({ length: 10 }, (_, i) => i + 1).map(n => `
-        <button type="button" class="rate-pill ${n === r ? 'active' : n < r ? 'filled' : ''}" data-act="rate" data-id="${m.meal_id}"
+        <button type="button" class="rate-pill ${n === r ? 'active' : n <= r ? 'filled' : ''}" data-act="rate" data-id="${m.meal_id}"
                 data-rating="${n}" aria-pressed="${n === r}" aria-label="${escapeHtml(t('meals.rateAria', { n }))}">${n}</button>`).join('');
     return `
         <div class="rating-row">
             <span class="rating-label">${escapeHtml(t('meals.rating'))}</span>
             <div class="rating-pills" role="group" aria-label="${escapeHtml(t('meals.rating'))}">${pills}</div>
+            <input type="text" class="rating-input" data-id="${m.meal_id}" inputmode="decimal" maxlength="4" autocomplete="off"
+                   value="${r ? r : ''}" placeholder="–" aria-label="${escapeHtml(t('meals.ratingField'))}" title="${escapeHtml(t('meals.ratingField'))}">
             <span class="muted text-sm rating-hint">${escapeHtml(ratingHint(r))}</span>
         </div>`;
 }
 
-// Tapping the current rating again clears it.
-async function setMealRating(m, rating) {
-    const next = Number(m.rating) === rating ? null : rating;
+// A typed rating: empty clears it; otherwise 1–10, rounded to one decimal.
+function parseRating(value) {
+    if (value === '' || value == null) return { ok: true, rating: null };
+    const n = Number(String(value).replace(',', '.'));
+    if (!Number.isFinite(n) || n < 1 || n > 10) return { ok: false };
+    return { ok: true, rating: Math.round(n * 10) / 10 };
+}
+
+async function onRatingInput(e) {
+    const input = e.target.closest('.rating-input');
+    if (!input) return;
+    const m = NUT.savedMeals.find(x => x.meal_id === Number(input.dataset.id));
+    if (!m) return;
+    const { ok, rating } = parseRating(input.value);
+    if (!ok) { showToast(t('meals.ratingInvalid'), 'error'); renderMealsTab(); return; }
+    if (rating === (m.rating ? Number(m.rating) : null)) return;
+    await setMealRating(m, rating, { toggle: false });
+}
+
+// Tapping the current rating button again clears it; the field sets it exactly.
+async function setMealRating(m, rating, { toggle = true } = {}) {
+    const next = toggle && Number(m.rating) === rating ? null : rating;
     const before = m.rating;
     m.rating = next;
     renderMealsTab();
@@ -267,15 +290,24 @@ function renderMealsTab() {
     }).join('');
 }
 
+// Compact row (name, rating, macros); tapping it shows foods, rating controls and actions.
+const openSavedMeals = new Set();   // meal_ids expanded — kept across re-renders
+
 function savedMealCard(m) {
     const items = withFoods(m.items);
     const count = timesEaten(savedMealSignature(m));
+    const open = openSavedMeals.has(m.meal_id);
+    const rating = m.rating ? Number(m.rating) : null;
     return `
-        <div class="card meal-card">
-            <div class="meal-head">
-                <h4>${escapeHtml(m.name)}</h4>
-                <div class="macro-pills">${macroPillsHtml(macrosOf(items))}</div>
-            </div>
+        <div class="card meal-card saved-meal ${open ? 'open' : ''}">
+            <button type="button" class="saved-meal-head" data-act="toggle" data-id="${m.meal_id}"
+                    aria-expanded="${open}" aria-controls="sm-body-${m.meal_id}">
+                <span class="sm-name">${escapeHtml(m.name)}</span>
+                ${rating ? `<span class="sm-rating" title="${escapeHtml(t('meals.rating'))}">★ ${rating}</span>` : ''}
+                <span class="macro-pills">${macroPillsHtml(macrosOf(items))}</span>
+                <span class="sm-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div class="saved-meal-body" id="sm-body-${m.meal_id}" ${open ? '' : 'hidden'}>
             <ul class="meal-items">${items.map(it => `<li>${itemLabel(it)}</li>`).join('') || `<li class="muted">—</li>`}</ul>
             ${ratingRowHtml(m)}
             <div class="meal-actions">
@@ -286,6 +318,7 @@ function savedMealCard(m) {
                     <button type="button" class="icon-btn" data-act="delete" data-id="${m.meal_id}" title="${escapeHtml(t('common.delete'))}">🗑</button>
                 </span>
             </div>
+            </div>
         </div>`;
 }
 
@@ -294,6 +327,15 @@ async function onSavedMealClick(e) {
     if (!btn) return;
     const m = NUT.savedMeals.find(x => x.meal_id === Number(btn.dataset.id));
     if (!m) return;
+
+    if (btn.dataset.act === 'toggle') {
+        const open = !openSavedMeals.has(m.meal_id);
+        if (open) openSavedMeals.add(m.meal_id); else openSavedMeals.delete(m.meal_id);
+        btn.closest('.saved-meal').classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open);
+        document.getElementById('sm-body-' + m.meal_id).hidden = !open;
+        return;
+    }
 
     if (btn.dataset.act === 'rate') await setMealRating(m, Number(btn.dataset.rating));
     if (btn.dataset.act === 'plan') openAddToPlan(m);
@@ -417,7 +459,9 @@ async function saveMealEditor(e) {
 
         const name = document.getElementById('me-name').value.trim();
         const slot = document.getElementById('me-slot').value;
-        const rating = Number(document.getElementById('me-rating').value) || null;
+        const parsed = parseRating(document.getElementById('me-rating').value);
+        if (!parsed.ok) { showToast(t('meals.ratingInvalid'), 'error'); return; }
+        const rating = parsed.rating;
         if (!name) return;
         let mealId = mealEditor.mealId;
         if (mealId) {
