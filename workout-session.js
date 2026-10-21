@@ -125,14 +125,15 @@ function renderSessionBar(navEl) {
         bar.querySelector('[data-sb="resume"]').title = t('sb.resume');
         bar.querySelector('[data-sb="stop"]').title = t('sb.stop');
 
-        bar.addEventListener('click', e => {
+        bar.addEventListener('click', async e => {
             const btn = e.target.closest('[data-sb]');
             if (!btn) { window.location.href = 'workout.html'; return; }
             e.stopPropagation();
             if (btn.dataset.sb === 'pause') sessionPause();
             if (btn.dataset.sb === 'resume') sessionStart();
             if (btn.dataset.sb === 'stop') {
-                if (!confirm(t('wo.confirmStop'))) return;
+                const ok = await confirmToast(t('wo.confirmStop'), { okText: t('wo.stopYes'), cancelText: t('wo.stopNo') });
+                if (!ok) return;
                 sessionStop();
                 window.location.href = 'workout.html#report';   // review & save the session
             }

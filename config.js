@@ -137,6 +137,47 @@ function showToast(message, type = 'success') {
     toast._t = setTimeout(() => toast.classList.remove('show'), 3200);
 }
 
+// In-app yes/no confirmation shown like a toast (instead of the browser's confirm()).
+// Resolves true for OK, false for Cancel / Escape. Only one is shown at a time.
+function confirmToast(message, { okText, cancelText } = {}) {
+    document.getElementById('confirm-toast')?._resolve?.(false);
+    return new Promise(resolve => {
+        const box = document.createElement('div');
+        box.id = 'confirm-toast';
+        box.className = 'confirm-toast';
+        box.setAttribute('role', 'alertdialog');
+        box.setAttribute('aria-modal', 'false');
+        box.innerHTML = `
+            <p class="confirm-msg"></p>
+            <div class="confirm-actions">
+                <button type="button" class="btn btn-ghost btn-sm" data-ans="no"></button>
+                <button type="button" class="btn btn-danger btn-sm" data-ans="yes"></button>
+            </div>`;
+        box.querySelector('.confirm-msg').textContent = message;
+        box.querySelector('[data-ans="no"]').textContent = cancelText || t('common.cancel');
+        box.querySelector('[data-ans="yes"]').textContent = okText || t('common.ok');
+
+        const onKey = e => { if (e.key === 'Escape') finish(false); };
+        function finish(answer) {
+            document.removeEventListener('keydown', onKey);
+            box.classList.remove('show');
+            setTimeout(() => box.remove(), 250);
+            resolve(answer);
+        }
+        box._resolve = finish;
+        box.addEventListener('click', e => {
+            const btn = e.target.closest('[data-ans]');
+            if (btn) { e.stopPropagation(); finish(btn.dataset.ans === 'yes'); }
+        });
+        document.addEventListener('keydown', onKey);
+
+        document.body.appendChild(box);
+        void box.offsetWidth;          // apply the start position so the slide-in animates
+        box.classList.add('show');
+        box.querySelector('[data-ans="no"]').focus();
+    });
+}
+
 // ============================================================
 // Shared top navigation — injected into every page
 // ============================================================

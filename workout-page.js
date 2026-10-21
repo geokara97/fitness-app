@@ -202,8 +202,9 @@ function startTimer() {
     saveDraft();
 }
 
-function stopTimer() {
-    if (!confirm(t('wo.confirmStop'))) return;
+async function stopTimer() {
+    const ok = await confirmToast(t('wo.confirmStop'), { okText: t('wo.stopYes'), cancelText: t('wo.stopNo') });
+    if (!ok) return;
     sessionStop();
     updateTimerUI();
     showReport();
