@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTrack — Daily Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav id="app-nav"></nav>
+
+    <div class="container">
+        <div class="page-head">
+            <h1>Daily Tracker</h1>
+            <p class="muted">Log your day — calories, weight, steps, sleep & water. Burn is calculated automatically.</p>
+        </div>
+
+        <div class="grid cols-2">
+            <!-- Log form -->
+            <div class="card">
+                <div class="section-title mt-0">✏️ Log a Day</div>
+                <form id="log-form">
+                    <div class="form-group">
+                        <label for="f-date">Date</label>
+                        <input type="date" id="f-date" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="f-weight">Weight (kg)</label>
+                            <input type="number" id="f-weight" step="0.1" placeholder="e.g. 89.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="f-eaten">Calories eaten</label>
+                            <input type="number" id="f-eaten" step="1" placeholder="e.g. 1800">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="f-steps">Steps walked</label>
+                            <input type="number" id="f-steps" step="1" placeholder="e.g. 10000">
+                        </div>
+                        <div class="form-group">
+                            <label for="f-sleep">Sleep (h)</label>
+                            <input type="number" id="f-sleep" step="0.1" placeholder="e.g. 7.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="f-water">Water (L)</label>
+                            <input type="number" id="f-water" step="0.1" placeholder="e.g. 3">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-notes">Notes</label>
+                        <textarea id="f-notes" rows="2" placeholder="Optional"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Save Day</button>
+                </form>
+            </div>
+
+            <!-- Calorie breakdown -->
+            <div class="card">
+                <div class="section-title mt-0">🔥 Calorie Breakdown</div>
+                <p class="muted text-sm" id="bd-date">—</p>
+                <table>
+                    <tbody>
+                        <tr><td>Resting burn (BMR + NEAT)</td><td class="num" id="bd-resting">—</td></tr>
+                        <tr><td>Steps burn</td><td class="num" id="bd-steps">—</td></tr>
+                        <tr><td>Workout burn <span class="muted text-sm">(from timer)</span></td><td class="num" id="bd-workout">—</td></tr>
+                        <tr><td><strong>Total burned</strong></td><td class="num"><strong id="bd-total">—</strong></td></tr>
+                        <tr><td>Calories eaten</td><td class="num" id="bd-eaten">—</td></tr>
+                        <tr><td><strong>Net (deficit)</strong></td><td class="num"><strong id="bd-net">—</strong></td></tr>
+                    </tbody>
+                </table>
+                <p class="muted text-sm" id="bd-hint" style="margin-top:10px"></p>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="section-title">📈 Progress</div>
+        <div class="grid cols-2">
+            <div class="card">
+                <strong>Weight trend</strong>
+                <div class="chart-box"><canvas id="weight-chart"></canvas></div>
+            </div>
+            <div class="card">
+                <strong>Daily net calories</strong>
+                <div class="chart-box"><canvas id="net-chart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- History table -->
+        <div class="section-title">🗓️ Recent Days</div>
+        <div class="card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th><th class="num">Weight</th><th class="num">Eaten</th>
+                            <th class="num">Steps</th><th class="num">Workout burn</th>
+                            <th class="num">Total burned</th><th class="num">Net</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+            <div id="history-empty" class="empty" style="display:none">
+                <div class="icon">📋</div><p>No days logged yet. Add your first entry above.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="config.js"></script>
+    <script src="tracker-page.js"></script>
+</body>
+</html>
