@@ -2013,3 +2013,5 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 @media (max-width: 520px) {
     .main-tabs:has(.main-tab[data-tab="shopping"]) .main-tab { font-size: .76rem; padding: 6px 2px; letter-spacing: -0.01em; }
 }
+
+.shop-days { margin: 0 0 12px; }

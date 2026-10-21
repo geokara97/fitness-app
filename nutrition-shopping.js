@@ -4,7 +4,9 @@
 // Uses the week shown on the Meal Plan tab (NUT.weekStart).
 // ============================================================
 
-let shopRange = 'week';            // 'week' | 'rest' (today onwards)
+let shopRange = 'week';            // 'week' | 'rest' (today onwards) | 'day' (one chosen day)
+let shopDayIdx = null;             // 0 = Monday … 6 = Sunday, for 'day'
+let shopDayWeek = null;            // the week shopDayIdx was picked in
 
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#shop-range .main-tab').forEach(tab => tab.addEventListener('click', () => {
@@ -15,6 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('shop-prev').addEventListener('click', () => changeWeek(-1));
     document.getElementById('shop-next').addEventListener('click', () => changeWeek(1));
     document.getElementById('shop-list').addEventListener('change', onShopTick);
+    document.getElementById('shop-days').addEventListener('click', e => {
+        const tab = e.target.closest('.day-tab');
+        if (!tab) return;
+        shopDayIdx = Number(tab.dataset.i);
+        renderShoppingList();
+    });
     document.getElementById('shop-share').addEventListener('click', shareShoppingList);
     document.getElementById('shop-clear').addEventListener('click', () => {
         saveTicks(new Set());
@@ -52,7 +60,9 @@ function shoppingTotals() {
     NUT.plan.rows.forEach(r => {
         const food = NUT.foodsById[r.food_id];
         if (!food || isExtraMeal(r.meal)) return;
-        if (shopRange === 'rest' && dateOfDay(r.day_of_week - 1) < today) return;
+        const date = dateOfDay(r.day_of_week - 1);
+        if (shopRange === 'rest' && date < today) return;
+        if (shopRange === 'day' && r.day_of_week !== shopDayIdx + 1) return;
         byFood.set(food.food_id, (byFood.get(food.food_id) || 0) + Number(r.grams));
     });
     return [...byFood].map(([id, grams]) => ({ food: NUT.foodsById[id], grams }));
@@ -66,11 +76,30 @@ function shopAmount(food, grams) {
     return weight;
 }
 
+// ---- Day strip ("By day") -----------------------------------
+// Starts on today in the current week, Monday in other weeks; kept while you stay in the week.
+function renderShopDays() {
+    const strip = document.getElementById('shop-days');
+    strip.hidden = shopRange !== 'day';
+    if (shopDayWeek !== NUT.weekStart || shopDayIdx === null) {
+        shopDayWeek = NUT.weekStart;
+        shopDayIdx = weeksFromNow(NUT.weekStart) === 0 ? dayIndexOf(todayISO()) : 0;
+    }
+    if (strip.hidden) return;
+    const today = todayISO();
+    strip.innerHTML = DAY_NAMES.map((d, i) => {
+        const iso = dateOfDay(i);
+        return `<div class="day-tab ${i === shopDayIdx ? 'active' : ''} ${iso === today ? 'today' : ''}" data-i="${i}">
+                    <span>${t('dayShort.' + d)}</span> <strong>${new Date(iso + 'T00:00:00').getDate()}</strong></div>`;
+    }).join('');
+}
+
 // ---- Render -------------------------------------------------
 function renderShoppingList() {
     const list = document.getElementById('shop-list');
     if (!list) return;
     document.getElementById('shop-week').textContent = weekLabel(NUT.weekStart);
+    renderShopDays();
     const n = weeksFromNow(NUT.weekStart);
     document.getElementById('shop-prev').disabled = n <= -WEEKS_BACK;
     document.getElementById('shop-next').disabled = n >= WEEKS_AHEAD;
@@ -82,7 +111,8 @@ function renderShoppingList() {
     }
     const totals = shoppingTotals();
     if (!totals.length) {
-        list.innerHTML = `<div class="card empty"><div class="icon">✅</div><p>${escapeHtml(t('shop.nothingLeft'))}</p></div>`;
+        const msg = shopRange === 'day' ? t('shop.nothingDay') : t('shop.nothingLeft');
+        list.innerHTML = `<div class="card empty"><div class="icon">✅</div><p>${escapeHtml(msg)}</p></div>`;
         renderShopCount();
         return;
     }
@@ -122,7 +152,8 @@ function renderShopCount() {
 async function shareShoppingList() {
     const ticks = loadTicks();
     const totals = shoppingTotals();
-    const lines = [`🛒 ${t('shop.title')} — ${weekLabel(NUT.weekStart)}`];
+    const when = shopRange === 'day' ? dayLabelFull(shopDayIdx) : weekLabel(NUT.weekStart);
+    const lines = [`🛒 ${t('shop.title')} — ${when}`];
     CATEGORY_ORDER.forEach(cat => {
         const group = totals.filter(x => x.food.category === cat && !ticks.has(String(x.food.food_id)))
             .sort((a, b) => foodName(a.food).localeCompare(foodName(b.food), LOCALE));
