@@ -170,6 +170,88 @@ function scheduleFavourites(favourites, rng) {
     return schedule;
 }
 
+// Whole-day corrections shared by generating and re-fitting:
+// protein top-up, calorie correction on carbs, then rounding.
+function finishDay(dayEntries, targets) {
+    // Daily protein top-up: spread any shortfall over protein portions that still have room.
+    const proteinEntries = dayEntries.filter(e => e.role === 'protein');
+    for (let pass = 0; pass < 4 && proteinEntries.length; pass++) {
+        const short = targets.protein - sumMacros(dayEntries).p;
+        if (short < 3) break;
+        const open = proteinEntries.filter(e => e.grams < portionBounds(e.food, e.role).max - 1);
+        if (!open.length) break;
+        open.forEach(e => {
+            const b = portionBounds(e.food, e.role);
+            e.grams = Math.min(b.max, e.grams + (short / open.length) / (Number(e.food.protein) / 100));
+        });
+    }
+
+    // Daily calorie correction: nudge carb portions toward the kcal target.
+    const carbEntries = dayEntries.filter(e => e.role === 'carbs' || e.role === 'fruit');
+    for (let pass = 0; pass < 3 && carbEntries.length; pass++) {
+        const diff = targets.kcal - sumMacros(dayEntries).kcal;
+        if (Math.abs(diff) < 25) break;
+        const share = diff / carbEntries.length;
+        carbEntries.forEach(e => {
+            const b = portionBounds(e.food, e.role);
+            const perG = Number(e.food.kcal) / 100 || 1;
+            e.grams = Math.min(b.max, Math.max(b.min, e.grams + share / perG));
+        });
+    }
+
+    dayEntries.forEach(e => { e.grams = e.role === 'vegetables' ? e.grams : roundPortion(e.food, e.grams); });
+}
+
+/**
+ * Re-fit an existing plan to new daily targets: same foods and meals, new portions.
+ * rows:     [{ day_of_week, meal, food_id, grams, sort_order, saved_meal_id }]
+ * Saved (favourite) meals keep their recipe and are scaled as a whole (±30%);
+ * vegetables keep their grams; every other food is re-solved like a fresh plan.
+ * Returns rows in the same shape with new grams.
+ */
+function refitMealPlan(rows, foodById, targets) {
+    const out = [];
+    for (let d = 1; d <= 7; d++) {
+        const dayEntries = [];
+        MEAL_TEMPLATES.forEach(tpl => {
+            const mealRows = rows
+                .filter(r => r.day_of_week === d && r.meal === tpl.meal && foodById[r.food_id])
+                .sort((a, b) => a.sort_order - b.sort_order);
+            if (!mealRows.length) return;
+            const entries = mealRows.map(r => {
+                const food = foodById[r.food_id];
+                return { food, grams: Number(r.grams), meal: tpl.meal, order: r.sort_order,
+                         savedMealId: r.saved_meal_id || null,
+                         role: ['protein', 'carbs', 'fruit', 'fats', 'vegetables'].includes(food.category) ? food.category : 'carbs' };
+            });
+
+            if (entries.some(e => e.savedMealId)) {
+                const kcal = sumMacros(entries).kcal;
+                const factor = kcal > 0 ? Math.min(1.3, Math.max(0.7, (targets.kcal * tpl.share) / kcal)) : 1;
+                entries.forEach(e => { e.grams *= factor; e.role = 'fixed'; });
+            } else {
+                const fixed = [0, 0, 0];
+                entries.filter(e => e.role === 'vegetables')
+                    .forEach(e => macroVec(e.food).forEach((m, k) => { fixed[k] += m * e.grams; }));
+                const parts = entries.filter(e => e.role !== 'vegetables')
+                    .map(e => ({ entry: e, role: e.role, vec: macroVec(e.food), bounds: portionBounds(e.food, e.role) }));
+                const target = [targets.protein * tpl.share, targets.carbs * tpl.share, targets.fat * tpl.share];
+                const grams = solveMeal(parts, target, fixed);
+                // Keep every food the user sees in the plan: never solve one away.
+                parts.forEach((part, i) => { part.entry.grams = grams[i] > 0 ? grams[i] : part.bounds.min; });
+            }
+            dayEntries.push(...entries);
+        });
+
+        finishDay(dayEntries, targets);
+        dayEntries.forEach(e => out.push({
+            day_of_week: d, meal: e.meal, food_id: e.food.food_id, grams: e.grams,
+            sort_order: e.order, saved_meal_id: e.savedMealId,
+        }));
+    }
+    return out;
+}
+
 /**
  * foods:      rows from `foods`
  * prefs:      { [food_id]: 'like' | 'dislike' | 'allergy' }
@@ -256,34 +338,9 @@ function generateMealPlan(foods, prefs, targets, rng = Math.random, favourites =
             dayEntries.push(...mealEntries);
         });
 
-        // Daily protein top-up: spread any shortfall over protein portions that still have room.
-        const proteinEntries = dayEntries.filter(e => e.role === 'protein');
-        for (let pass = 0; pass < 4 && proteinEntries.length; pass++) {
-            const short = targets.protein - sumMacros(dayEntries).p;
-            if (short < 3) break;
-            const open = proteinEntries.filter(e => e.grams < portionBounds(e.food, e.role).max - 1);
-            if (!open.length) break;
-            open.forEach(e => {
-                const b = portionBounds(e.food, e.role);
-                e.grams = Math.min(b.max, e.grams + (short / open.length) / (Number(e.food.protein) / 100));
-            });
-        }
+        finishDay(dayEntries, targets);
 
-        // Daily calorie correction: nudge carb portions toward the kcal target.
-        const carbEntries = dayEntries.filter(e => e.role === 'carbs' || e.role === 'fruit');
-        for (let pass = 0; pass < 3 && carbEntries.length; pass++) {
-            const diff = targets.kcal - sumMacros(dayEntries).kcal;
-            if (Math.abs(diff) < 25) break;
-            const share = diff / carbEntries.length;
-            carbEntries.forEach(e => {
-                const b = portionBounds(e.food, e.role);
-                const perG = Number(e.food.kcal) / 100 || 1;
-                e.grams = Math.min(b.max, Math.max(b.min, e.grams + share / perG));
-            });
-        }
-
-        // Round portions, then emit in meal order.
-        dayEntries.forEach(e => { e.grams = e.role === 'vegetables' ? e.grams : roundPortion(e.food, e.grams); });
+        // Emit in meal order.
         const order = { protein: 0, carbs: 1, fruit: 1, fats: 2, vegetables: 3 };
         const rank = e => e.role === 'fixed' ? e.order : order[e.role];
         MEAL_TEMPLATES.forEach(tpl => {

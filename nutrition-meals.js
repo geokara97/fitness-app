@@ -228,17 +228,34 @@ function timesEaten(signature) {
 
 // Mark today's meal as eaten (adds its calories to today's tracker), or undo it.
 // macros: totals for meals without food data (the built-in default plan).
-async function toggleEatenToday({ slot, savedMealId, name, items, macros = null }) {
+// One toggle at a time: a quick double tap must not log the meal twice.
+let eatToggleBusy = false;
+async function toggleEatenToday(args) {
+    if (eatToggleBusy) return;
+    eatToggleBusy = true;
+    try { await toggleEatenTodayNow(args); } finally { eatToggleBusy = false; }
+}
+
+async function toggleEatenTodayNow({ slot, savedMealId, name, items, macros = null }) {
     const today = todayISO();
-    const existing = findTodayLog(slot);
-    if (existing) {
-        const { error } = await db.from('meal_log').delete().eq('log_id', existing.log_id);
+
+    // Ask the database, not the page's copy: another tab may have changed it.
+    const { data: logged, error: qErr } = await db.from('meal_log')
+        .select('*').eq('eaten_on', today).eq('meal', slot);
+    if (qErr) { showToast(t('common.error', { msg: qErr.message }), 'error'); return; }
+    NUT.mealLog = NUT.mealLog.filter(l => !(l.eaten_on === today && l.meal === slot)).concat(logged || []);
+
+    if (logged && logged.length) {
+        // Unmark: remove every entry for this slot (older double taps could leave two)
+        // but take the meal's calories off only once — they were only added once.
+        const ids = logged.map(l => l.log_id);
+        const { error } = await db.from('meal_log').delete().in('log_id', ids);
         if (error) { showToast(t('common.error', { msg: error.message }), 'error'); return; }
-        NUT.mealLog = NUT.mealLog.filter(l => l.log_id !== existing.log_id);
-        const kcal = Number(existing.kcal) || 0;
+        NUT.mealLog = NUT.mealLog.filter(l => !ids.includes(l.log_id));
+        const kcal = Math.round(Number(logged[0].kcal) || 0);
         try {
             const total = await adjustCaloriesEaten(today, -kcal);
-            showToast(t('meals.unmarked', { meal: t('meal.' + slot), kcal: round(kcal), total }));
+            showToast(t('meals.unmarked', { meal: t('meal.' + slot), kcal, total }));
         } catch (err) {
             showToast(t('meals.trackerError', { msg: err.message }), 'error');
         }
@@ -253,15 +270,16 @@ async function toggleEatenToday({ slot, savedMealId, name, items, macros = null 
             const f = NUT.foodsById[it.food_id] || {};
             return { food_id: it.food_id, name_en: f.name_en || null, name_el: f.name_el || null, grams: Number(it.grams) };
         }),
-        kcal: round(mm.kcal, 1), protein: round(mm.p, 1), carbs: round(mm.c, 1), fat: round(mm.f, 1),
+        // Whole kcal: exactly what is added now is what unmarking takes off later.
+        kcal: Math.round(mm.kcal), protein: round(mm.p, 1), carbs: round(mm.c, 1), fat: round(mm.f, 1),
     };
     row.eaten_on = today;
     const { data, error } = await db.from('meal_log').insert([row]).select().single();
     if (error) { showToast(t('common.errorSaving', { msg: error.message }), 'error'); return; }
     NUT.mealLog.unshift(data);
     try {
-        const total = await adjustCaloriesEaten(today, Number(row.kcal) || 0);
-        showToast(t('meals.marked', { meal: t('meal.' + slot), kcal: round(row.kcal), total }));
+        const total = await adjustCaloriesEaten(today, row.kcal);
+        showToast(t('meals.marked', { meal: t('meal.' + slot), kcal: row.kcal, total }));
     } catch (err) {
         showToast(t('meals.trackerError', { msg: err.message }), 'error');
     }

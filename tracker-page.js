@@ -7,6 +7,7 @@ let weightChart = null;
 let netChart = null;
 let activeChart = 'weight';
 let dayHasEntry = false;
+let loadedEaten = '';          // "Calories eaten" as loaded, to tell user edits from stale values
 
 // Everyday goals for the progress bars on the metric tiles
 const GOALS = { steps: 10000, sleep: 8, water: 3 };
@@ -44,6 +45,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         scheduleSave();
     }));
     document.getElementById('btn-delete-day').addEventListener('click', () => deleteDay(dateInput.value));
+
+    // Back on this page (back button, another tab, app switch): meals may have been
+    // marked as eaten meanwhile, so reload the day unless an edit is still pending.
+    const refreshIfIdle = async () => {
+        if (saveTimer || savePromise || document.activeElement?.closest?.('#log-form')) return;
+        await loadDay();
+        await refreshHistory();
+    };
+    window.addEventListener('pageshow', e => { if (e.persisted) refreshIfIdle(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshIfIdle(); });
 
     document.querySelectorAll('.chart-tabs .main-tab').forEach(tab =>
         tab.addEventListener('click', () => showChart(tab.dataset.chart)));
@@ -108,6 +119,7 @@ async function loadDay() {
     ]);
     const d = dailyRes.data || {};
     dayHasEntry = !!dailyRes.data;
+    loadedEaten = d.calories_eaten == null ? '' : String(d.calories_eaten);
     document.getElementById('f-weight').value = weightRes.data ? weightRes.data.weight : '';
     document.getElementById('f-eaten').value = d.calories_eaten ?? '';
     document.getElementById('f-steps').value = d.steps ?? '';
@@ -136,8 +148,14 @@ function updateTiles() {
     bar('water-bar', water, GOALS.water);
     document.getElementById('steps-sub').textContent = t('trk.goalOf', { n: GOALS.steps.toLocaleString(LOCALE) });
     document.getElementById('sleep-sub').textContent = t('trk.goalOf', { n: GOALS.sleep + ' h' });
-    document.getElementById('weight-sub').textContent =
-        t('trk.goalOf', { n: Number(profile.goal_weight) + ' kg' });
+    // Weight: progress from the start weight to the goal weight (both set in Settings).
+    const start = Number(profile.start_weight), goal = Number(profile.goal_weight);
+    const weightNow = num('f-weight') || Number(profile.current_weight);
+    const done = start > goal ? (start - weightNow) / (start - goal) : 0;
+    document.getElementById('weight-bar').style.transform = `scaleX(${Math.min(1, Math.max(0, done))})`;
+    document.getElementById('weight-sub').textContent = `${start} → ${goal} kg · ` + (weightNow <= goal
+        ? t('set.goalReached')
+        : t('set.toGo', { n: round(weightNow - goal, 1) }));
 }
 
 // ---- Saving -------------------------------------------------
@@ -147,12 +165,12 @@ let savePromise = null;
 function scheduleSave() {
     clearTimeout(saveTimer);
     setSaveStatus('saving');
-    saveTimer = setTimeout(() => { saveTimer = null; savePromise = saveDay(); }, 400);
+    saveTimer = setTimeout(() => { saveTimer = null; savePromise = saveDay().finally(() => { savePromise = null; }); }, 400);
 }
 
 // Before switching days, commit any pending edit for the current one.
 async function flushSave() {
-    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; savePromise = saveDay(); }
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; savePromise = saveDay().finally(() => { savePromise = null; }); }
     if (savePromise) await savePromise;
 }
 
@@ -182,12 +200,17 @@ async function saveDay() {
     };
     const empty = Object.entries(row).every(([k, v]) => k === 'log_date' || v === null);
 
+    // "Calories eaten" is also changed by marking meals as eaten in Nutrition.
+    // Only write it when it was edited here, so a stale page never overwrites those calories.
+    if (document.getElementById('f-eaten').value === loadedEaten) delete row.calories_eaten;
+
     try {
         // Daily log (calories / steps / sleep / water / notes). Don't create an empty row.
         if (!empty || dayHasEntry) {
             const { error: dErr } = await db.from('daily_log').upsert(row, { onConflict: 'log_date' });
             if (dErr) throw dErr;
             dayHasEntry = true;
+            if ('calories_eaten' in row) loadedEaten = document.getElementById('f-eaten').value;
         }
 
         // Weight log
@@ -200,10 +223,11 @@ async function saveDay() {
             const { data: latest } = await db.from('weight_log')
                 .select('weight').order('log_date', { ascending: false }).limit(1);
             if (latest && latest.length) {
-                // New bodyweight: protein (2.25 g/kg) and the carbs/fat that fill the target follow it.
+                // New bodyweight: with Auto macros, protein (2.25 g/kg) and the carbs/fat
+                // that fill the target follow it. Custom macros are left alone.
                 await db.from('profile').update({
                     current_weight: latest[0].weight,
-                    ...calcMacroTargets(profile.daily_calorie_target, latest[0].weight),
+                    ...(getMacroMode() === 'auto' ? calcMacroTargets(profile.daily_calorie_target, latest[0].weight) : {}),
                 }).eq('id', 1);
                 clearProfileCache();
                 profile = await loadProfile();

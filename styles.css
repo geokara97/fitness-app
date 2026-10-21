@@ -1842,3 +1842,50 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 .food-row { flex-wrap: wrap; }
 .food-row .food-info { flex: 1 1 190px; }
 .food-row .pref-btns { margin-left: auto; }
+
+/* ---- Settings: macro mode + editable macros + save bar ------ */
+.macro-mode-row { cursor: default; }
+.mini-seg { flex: 0 0 auto; width: 190px; margin: 0; }
+.mini-seg .main-tab { min-height: 30px; padding: 4px 8px; font-size: .8rem; }
+.mt-val { display: flex; align-items: baseline; gap: 3px; min-width: 0; }
+.mt-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    font-family: var(--font-num);
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    -moz-appearance: textfield;
+}
+.mt-input::-webkit-outer-spin-button,
+.mt-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.mt-input:focus { box-shadow: none; border: none; background: transparent; }
+.mt-input[readonly] { cursor: default; }
+.mt-unit { font-size: .85rem; font-weight: 600; color: var(--text-soft); }
+/* Custom: the tiles read as editable fields */
+.macro-split.custom .macro-tile { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tint) 45%, transparent); cursor: text; }
+.macro-split.custom .macro-tile:focus-within { box-shadow: inset 0 0 0 2px var(--tint); }
+.list-footer.warn { color: var(--accent-text); }
+
+/* Save button stays in reach, floating above the tab bar on phones */
+.save-bar {
+    position: sticky;
+    bottom: 16px;
+    z-index: 20;
+    margin-top: 22px;
+}
+.save-bar .btn { box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 35%, transparent); }
+.save-bar .btn:disabled { box-shadow: none; background: var(--fill); color: var(--text-soft); opacity: 1; }
+@media (max-width: 860px) {
+    .save-bar { bottom: calc(var(--tabbar-h) + var(--tabbar-gap) + 12px); }
+}
+
+/* Only float the save button while there is something to save */
+.save-bar:has(.btn:disabled) { position: static; }
+.mt-input { flex: 0 0 auto; width: 4ch; }

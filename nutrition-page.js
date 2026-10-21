@@ -131,7 +131,15 @@ function foodName(food) {
     return (LANG === 'el' && food.name_el) ? food.name_el : food.name_en;
 }
 
+// The daily targets from Settings — the page always shows these.
+function profileTargets() {
+    const p = NUT.profile;
+    return p ? { kcal: Number(p.daily_calorie_target), protein: Number(p.protein_target),
+                 carbs: Number(p.carbs_target), fat: Number(p.fat_target) } : null;
+}
+
 async function loadNutritionData() {
+    try { NUT.profile = await loadProfile(); } catch { NUT.profile = null; }
     try {
         const [foodsRes, prefsRes, plansRes] = await Promise.all([
             db.from('foods').select('*').order('name_en'),
@@ -199,13 +207,52 @@ async function loadPlanItems(planRow) {
             };
         }).filter(m => m.items.length),
     }));
-    return { meta: planRow, days };
+    return { meta: planRow, days, rows: data || [] };
 }
 
 async function loadWeek(weekStart) {
     NUT.weekStart = weekStart;
     const row = NUT.plansByWeek[weekStart];
     NUT.plan = row ? await loadPlanItems(row) : null;
+
+    // A plan made for other targets (Settings changed since): keep its foods,
+    // re-fit the portions to today's targets. Past weeks stay as they were.
+    if (NUT.plan && weeksFromNow(weekStart) >= 0 && planTargetsDiffer(row)) {
+        try {
+            await refitPlan(NUT.plan);
+            NUT.plan = await loadPlanItems(NUT.plansByWeek[weekStart]);
+            showToast(t('np.refitted', { week: weekLabel(weekStart) }), 'success');
+        } catch (err) {
+            console.warn('Could not re-fit the plan:', err.message);
+        }
+    }
+}
+
+function planTargetsDiffer(row) {
+    const tg = profileTargets();
+    return !!tg && (Number(row.kcal_target) !== tg.kcal || Number(row.protein_target) !== tg.protein
+        || Number(row.carbs_target) !== tg.carbs || Number(row.fat_target) !== tg.fat);
+}
+
+async function refitPlan(plan) {
+    const tg = profileTargets();
+    const rows = refitMealPlan(plan.rows, NUT.foodsById, tg)
+        .map(r => {
+            const row = { plan_id: plan.meta.plan_id, ...r };
+            if (!NUT.mealsReady) delete row.saved_meal_id;   // column added by meals_schema.sql
+            return row;
+        });
+    const { data, error } = await db.from('meal_plans').update({
+        kcal_target: tg.kcal, protein_target: tg.protein, carbs_target: tg.carbs, fat_target: tg.fat,
+    }).eq('plan_id', plan.meta.plan_id).select().single();
+    if (error) throw error;
+    const { error: dErr } = await db.from('meal_plan_items').delete().eq('plan_id', plan.meta.plan_id);
+    if (dErr) throw dErr;
+    if (rows.length) {
+        const { error: iErr } = await db.from('meal_plan_items').insert(rows);
+        if (iErr) throw iErr;
+    }
+    NUT.plansByWeek[NUT.weekStart] = data;
 }
 
 async function reloadPlan() {
@@ -316,11 +363,17 @@ function renderPlan() {
     genBtn.disabled = !NUT.dbReady;
     genBtn.hidden = !isCurrentWeek;   // plans are only generated for the current week
 
+    // Targets come from Settings. Only a past week's plan keeps the targets it was made for.
+    const tg = profileTargets();
+    const pastPlan = NUT.plan && weeksFromNow(NUT.weekStart) < 0;
+
     if (NUT.plan) {
         const m = NUT.plan.meta;
+        const shown = pastPlan || !tg
+            ? { kcal: m.kcal_target, protein: m.protein_target, carbs: m.carbs_target, fat: m.fat_target } : tg;
         document.getElementById('np-title').textContent = t('np.myPlanTitle');
-        document.getElementById('np-subtitle').textContent = t('np.myPlanSubtitle', { kcal: m.kcal_target });
-        setTargets(m.kcal_target, m.protein_target, m.carbs_target, m.fat_target);
+        document.getElementById('np-subtitle').textContent = t('np.myPlanSubtitle', { kcal: shown.kcal });
+        setTargets(shown.kcal, shown.protein, shown.carbs, shown.fat);
         banner.textContent = isCurrentWeek
             ? t('np.bannerWeekPlan', {
                 week: weekLabel(NUT.weekStart),
@@ -333,8 +386,14 @@ function renderPlan() {
     } else {
         const m = NUTRITION_PLAN.meta;
         document.getElementById('np-title').textContent = planText(m.title);
-        document.getElementById('np-subtitle').textContent = planText(m.subtitle);
-        setTargets(m.calories, m.protein, m.carbs, m.fat);
+        if (tg) {
+            // The sample plan has fixed portions; the targets shown are still yours.
+            document.getElementById('np-subtitle').textContent = t('np.defaultSubtitle', { kcal: tg.kcal });
+            setTargets(tg.kcal, tg.protein, tg.carbs, tg.fat);
+        } else {
+            document.getElementById('np-subtitle').textContent = planText(m.subtitle);
+            setTargets(m.calories, m.protein, m.carbs, m.fat);
+        }
         banner.textContent = !NUT.dbReady ? t('foods.dbMissing')
             : t(isCurrentWeek ? 'np.bannerNoWeekPlan' : 'np.bannerOtherWeekNoPlan', { week: weekLabel(NUT.weekStart) });
         genBtn.textContent = t('np.generate');

@@ -16,15 +16,18 @@ const NUMERIC = new Set([
     'lifting_kcal_per_kg_min', 'lifting_default_min', 'walking_kcal_per_1000',
     'neat_multiplier', 'daily_calorie_target', 'protein_target', 'carbs_target', 'fat_target',
 ]);
+const MACRO_IDS = ['s-protein', 's-carbs', 's-fat'];
 
 let profile = null;
+let savedSnapshot = '';          // form state as last saved, to know when there are changes
+let savedMode = 'auto';
+let macroMode = getMacroMode();
 
 document.addEventListener('DOMContentLoaded', async () => {
     renderNav('settings');
 
-    // Language switch (segmented control)
-    const langTabs = document.querySelectorAll('.lang-seg .main-tab');
-    langTabs.forEach(tab => {
+    // Language switch (segmented control) — applies immediately, not part of the profile
+    document.querySelectorAll('.lang-seg .main-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.lang === LANG);
         tab.addEventListener('click', () => { if (tab.dataset.lang !== LANG) setLang(tab.dataset.lang); });
     });
@@ -34,28 +37,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         profile = await loadProfile();
     } catch (e) { return; }
 
+    // The latest weigh-in is the current weight everywhere (Home, Tracker, here).
+    const { data: latest } = await db.from('weight_log')
+        .select('weight').order('log_date', { ascending: false }).limit(1);
+    if (latest && latest.length) profile.current_weight = latest[0].weight;
+
     for (const [elId, col] of Object.entries(FIELDS)) {
         const el = document.getElementById(elId);
         el.value = profile[col] ?? '';
-        el.addEventListener('input', recompute);
-        el.addEventListener('change', () => { recompute(); scheduleSave(); });
+        el.addEventListener('input', onFormEdit);
+        el.addEventListener('change', onFormEdit);
     }
     document.querySelectorAll('[data-step]').forEach(btn => btn.addEventListener('click', () => {
         const input = document.getElementById('s-kcal');
         input.value = Math.max(800, Number(input.value || 0) + Number(btn.dataset.step));
-        recompute();
-        scheduleSave();
+        onFormEdit();
     }));
-    document.getElementById('settings-form').addEventListener('submit', e => {
-        e.preventDefault();
-        document.activeElement?.blur();
-    });
-    recompute();
 
-    // Stored macros from before the automatic rule: bring them in line once.
-    const p = formProfile();
-    if (p.protein_target !== Number(profile.protein_target) || p.carbs_target !== Number(profile.carbs_target)
-        || p.fat_target !== Number(profile.fat_target)) save();
+    // Macro mode: Auto (worked out) / Custom (typed in)
+    document.querySelectorAll('#macro-mode .main-tab').forEach(tab =>
+        tab.addEventListener('click', () => setMode(tab.dataset.mode)));
+    setMode(macroMode, { initial: true });
+    if (typeof attachTabIndicator === 'function') attachTabIndicator(document.getElementById('macro-mode'), '.main-tab');
+
+    savedSnapshot = snapshot();
+    savedMode = macroMode;
+    updateDirty();
+
+    document.getElementById('settings-form').addEventListener('submit', save);
+    window.addEventListener('beforeunload', e => {
+        if (isDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
 });
 
 // Build a profile-like object from current form values.
@@ -68,16 +80,43 @@ function formProfile() {
     return p;
 }
 
+function snapshot() { return JSON.stringify(formProfile()); }
+function isDirty() { return snapshot() !== savedSnapshot || macroMode !== savedMode; }
+function updateDirty() {
+    const btn = document.getElementById('btn-save');
+    btn.disabled = !isDirty();
+}
+
+function onFormEdit() {
+    recompute();
+    updateDirty();
+}
+
+function setMode(mode, { initial = false } = {}) {
+    macroMode = mode;
+    document.querySelectorAll('#macro-mode .main-tab').forEach(tab =>
+        tab.classList.toggle('active', tab.dataset.mode === mode));
+    MACRO_IDS.forEach(id => { document.getElementById(id).readOnly = mode === 'auto'; });
+    document.querySelector('.macro-split').classList.toggle('custom', mode === 'custom');
+    recompute();
+    if (!initial) {
+        updateDirty();
+        if (mode === 'custom') document.getElementById('s-protein').focus();
+    }
+}
+
 function recompute() {
     const p = formProfile();
     const w = p.current_weight || p.start_weight || 90;
 
-    // Macros follow the calorie target and bodyweight (see calcMacroTargets in config.js).
-    const macros = calcMacroTargets(p.daily_calorie_target, w);
-    document.getElementById('s-protein').value = macros.protein_target;
-    document.getElementById('s-carbs').value = macros.carbs_target;
-    document.getElementById('s-fat').value = macros.fat_target;
-    renderMacros(macros, p.daily_calorie_target, w);
+    // Auto: macros follow the calorie target and bodyweight (calcMacroTargets in config.js).
+    if (macroMode === 'auto') {
+        const m = calcMacroTargets(p.daily_calorie_target, w);
+        document.getElementById('s-protein').value = m.protein_target;
+        document.getElementById('s-carbs').value = m.carbs_target;
+        document.getElementById('s-fat').value = m.fat_target;
+    }
+    renderMacros(formProfile(), w);
 
     const bmr = calcBMR(w, p);
     const resting = calcRestingBurn(w, p);
@@ -97,21 +136,28 @@ function recompute() {
     renderProfileHeader(p, w);
 }
 
-function renderMacros(m, kcal, weight) {
-    const kc = { p: m.protein_target * 4, c: m.carbs_target * 4, f: m.fat_target * 9 };
-    const total = kc.p + kc.c + kc.f || 1;
-    const pct = k => Math.round((kc[k] / total) * 100);
-    document.getElementById('m-p').textContent = `${m.protein_target} g`;
-    document.getElementById('m-c').textContent = `${m.carbs_target} g`;
-    document.getElementById('m-f').textContent = `${m.fat_target} g`;
-    document.getElementById('m-p-sub').textContent = `${pct('p')}% · ${round(m.protein_target / weight, 2)} g/kg`;
+function renderMacros(p, weight) {
+    const kc = { p: p.protein_target * 4, c: p.carbs_target * 4, f: p.fat_target * 9 };
+    const sum = kc.p + kc.c + kc.f;
+    const pct = k => Math.round((kc[k] / (sum || 1)) * 100);
+    document.getElementById('m-p-sub').textContent = `${pct('p')}% · ${round(p.protein_target / weight, 2)} g/kg`;
     document.getElementById('m-c-sub').textContent = `${pct('c')}% · ${round(kc.c)} kcal`;
     document.getElementById('m-f-sub').textContent = `${pct('f')}% · ${round(kc.f)} kcal`;
     document.getElementById('mb-p').style.width = pct('p') + '%';
     document.getElementById('mb-c').style.width = pct('c') + '%';
     document.getElementById('mb-f').style.width = pct('f') + '%';
-    document.getElementById('macro-rule').textContent =
-        t('set.macroRule', { g: MACRO_RULES.proteinPerKg, w: round(weight, 1) });
+
+    const rule = document.getElementById('macro-rule');
+    rule.classList.remove('warn');
+    if (macroMode === 'auto') {
+        rule.textContent = t('set.macroRule', { g: MACRO_RULES.proteinPerKg, w: round(weight, 1) });
+    } else {
+        // Custom: show how the typed macros add up against the calorie target.
+        const diff = round(sum - p.daily_calorie_target);
+        rule.textContent = t('set.macroSum', { sum: round(sum), target: p.daily_calorie_target }) + ' ' +
+            (Math.abs(diff) <= 25 ? t('set.macroMatch') : t(diff > 0 ? 'set.macroOver' : 'set.macroUnder', { n: Math.abs(diff) }));
+        rule.classList.toggle('warn', Math.abs(diff) > 25);
+    }
 }
 
 function renderProfileHeader(p, w) {
@@ -128,31 +174,35 @@ function renderProfileHeader(p, w) {
     document.getElementById('pf-bar').style.width = done + '%';
 }
 
-// ---- Saving: every change commits on its own ----------------
-let saveTimer = null;
-
-function scheduleSave() {
-    clearTimeout(saveTimer);
-    setSaveStatus('saving');
-    saveTimer = setTimeout(save, 500);
-}
-
-function setSaveStatus(state) {
-    const el = document.getElementById('save-status');
-    el.className = 'save-status' + (state ? ' ' + state : '');
-    el.textContent = state === 'saving' ? t('trk.saving') : state === 'saved' ? '✓ ' + t('trk.savedShort') : '';
-}
-
-async function save() {
+// ---- Save ---------------------------------------------------
+async function save(e) {
+    e.preventDefault();
+    document.activeElement?.blur();
     const payload = formProfile();
     if (!payload.goal_date) payload.goal_date = null;
+    const weightChanged = Number(payload.current_weight) !== Number(JSON.parse(savedSnapshot).current_weight);
+
+    const btn = document.getElementById('btn-save');
+    btn.disabled = true;
     try {
         const { error } = await db.from('profile').update(payload).eq('id', 1);
         if (error) throw error;
+
+        // A new current weight is today's weigh-in, so Home, the Tracker and the charts agree.
+        if (weightChanged && payload.current_weight > 0) {
+            const { error: wErr } = await db.from('weight_log').upsert(
+                { log_date: todayISO(), weight: payload.current_weight }, { onConflict: 'log_date' });
+            if (wErr) throw wErr;
+        }
+
+        setMacroMode(macroMode);
         clearProfileCache();
-        setSaveStatus('saved');
+        savedSnapshot = snapshot();
+        savedMode = macroMode;
+        showToast(t('set.saved'), 'success');
     } catch (err) {
-        setSaveStatus('');
         showToast(t('common.errorSaving', { msg: err.message }), 'error');
+    } finally {
+        updateDirty();
     }
 }

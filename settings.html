@@ -27,7 +27,6 @@
                 <div class="progress pf-progress"><span id="pf-bar" style="width:0%"></span></div>
             </div>
         </div>
-        <div class="save-status" id="save-status" aria-live="polite"></div>
 
         <!-- Language (saved in this browser, not the profile) -->
         <div class="section-title" data-i18n="set.language">🌐 Language</div>
@@ -85,13 +84,19 @@
                         <button type="button" class="stepper-btn" data-step="50" aria-label="+50 kcal">+</button>
                     </div>
                 </div>
+                <div class="list-row macro-mode-row">
+                    <span class="lr-label" data-i18n="set.macros">Macros</span>
+                    <div class="main-tabs mini-seg" id="macro-mode" role="tablist">
+                        <button type="button" class="main-tab" data-mode="auto" role="tab" data-i18n="set.macroAuto">Auto</button>
+                        <button type="button" class="main-tab" data-mode="custom" role="tab" data-i18n="set.macroCustom">Custom</button>
+                    </div>
+                </div>
                 <div class="macro-split">
-                    <div class="macro-tile mt-p"><span class="mt-name" data-i18n="np.protein">Protein</span><strong id="m-p">—</strong><span class="mt-sub" id="m-p-sub"></span></div>
-                    <div class="macro-tile mt-c"><span class="mt-name" data-i18n="np.carbs">Carbs</span><strong id="m-c">—</strong><span class="mt-sub" id="m-c-sub"></span></div>
-                    <div class="macro-tile mt-f"><span class="mt-name" data-i18n="np.fat">Fat</span><strong id="m-f">—</strong><span class="mt-sub" id="m-f-sub"></span></div>
+                    <div class="macro-tile mt-p"><label class="mt-name" for="s-protein" data-i18n="np.protein">Protein</label><span class="mt-val"><input type="number" class="mt-input" id="s-protein" step="1" min="0" inputmode="numeric" enterkeyhint="done"><span class="mt-unit">g</span></span><span class="mt-sub" id="m-p-sub"></span></div>
+                    <div class="macro-tile mt-c"><label class="mt-name" for="s-carbs" data-i18n="np.carbs">Carbs</label><span class="mt-val"><input type="number" class="mt-input" id="s-carbs" step="1" min="0" inputmode="numeric" enterkeyhint="done"><span class="mt-unit">g</span></span><span class="mt-sub" id="m-c-sub"></span></div>
+                    <div class="macro-tile mt-f"><label class="mt-name" for="s-fat" data-i18n="np.fat">Fat</label><span class="mt-val"><input type="number" class="mt-input" id="s-fat" step="1" min="0" inputmode="numeric" enterkeyhint="done"><span class="mt-unit">g</span></span><span class="mt-sub" id="m-f-sub"></span></div>
                     <div class="macro-bar" aria-hidden="true"><span class="mb-p" id="mb-p"></span><span class="mb-c" id="mb-c"></span><span class="mb-f" id="mb-f"></span></div>
                 </div>
-                <input type="hidden" id="s-protein"><input type="hidden" id="s-carbs"><input type="hidden" id="s-fat">
             </div>
             <p class="list-footer" id="macro-rule"></p>
 
@@ -110,6 +115,10 @@
             <p class="list-footer"><span data-i18n="set.constantsDesc">These drive every burn calculation, including the workout timer.</span>
                 <span data-i18n="set.liftHint">Workout burn = bodyweight × this × minutes timed.</span>
                 <span data-i18n="set.neatHint">BMR × this = resting daily burn.</span></p>
+            <!-- Save: enabled once something changed -->
+            <div class="save-bar">
+                <button type="submit" class="btn btn-primary btn-lg btn-block" id="btn-save" disabled data-i18n="set.save">Save Settings</button>
+            </div>
         </form>
 
         <!-- Computed -->

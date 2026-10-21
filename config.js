@@ -73,6 +73,16 @@ function calcTotalBurned(weightKg, steps, workoutBurn, p) {
 // fat 25% of calories but never under 0.6 g/kg (hormonal health),
 // carbs fill the remaining calories (fuel for training).
 const MACRO_RULES = { proteinPerKg: 2.25, fatShare: 0.25, minFatPerKg: 0.6 };
+
+// 'auto' = macros follow the rule above; 'custom' = the user typed their own.
+// Kept in this browser (like the language), read by Settings and the Tracker.
+const MACRO_MODE_KEY = 'fittrack-macro-mode';
+function getMacroMode() {
+    try { return localStorage.getItem(MACRO_MODE_KEY) === 'custom' ? 'custom' : 'auto'; } catch { return 'auto'; }
+}
+function setMacroMode(mode) {
+    try { localStorage.setItem(MACRO_MODE_KEY, mode); } catch { /* storage unavailable */ }
+}
 function calcMacroTargets(kcal, weightKg) {
     kcal = Number(kcal) || 0;
     weightKg = Number(weightKg) || 0;
