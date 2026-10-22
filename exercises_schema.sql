@@ -25,6 +25,22 @@ alter table public.exercises
     add column if not exists exercise_name_el text,
     add column if not exists is_custom        boolean not null default false;
 
+-- Timed exercises (plank, wall sit…) are logged in seconds instead of reps.
+alter table public.exercises
+    add column if not exists measure text not null default 'reps';
+alter table public.workout_exercises
+    add column if not exists duration_seconds integer;
+do $$
+begin
+    if not exists (select 1 from pg_constraint where conname = 'exercises_measure_check') then
+        alter table public.exercises add constraint exercises_measure_check check (measure in ('reps', 'time'));
+    end if;
+    if not exists (select 1 from pg_constraint where conname = 'workout_exercises_duration_check') then
+        alter table public.workout_exercises
+            add constraint workout_exercises_duration_check check (duration_seconds is null or duration_seconds > 0);
+    end if;
+end $$;
+
 create table if not exists public.exercise_splits (
     exercise_id bigint not null references public.exercises (exercise_id) on delete cascade,
     split_id    bigint not null references public.splits (split_id) on delete cascade,
@@ -118,7 +134,6 @@ insert into public.splits (split_name, split_name_el, sort_order) values
     ('Chest',     'Στήθος',        7),
     ('Back',      'Πλάτη',         8),
     ('Shoulders', 'Ώμοι',          9),
-    ('Arms',      'Χέρια',        10),
     ('Biceps',    'Δικέφαλοι',    11),
     ('Triceps',   'Τρικέφαλοι',   12),
     ('Core',      'Κοιλιακοί',    13)
@@ -156,16 +171,16 @@ insert into exercise_seed values
 ('Face Pull',                      'Face pull σε τροχαλία',                '{Pull,Upper,Shoulders}'),
 ('Upright Row',                    'Όρθια κωπηλατική',                     '{Shoulders}'),
 -- Triceps
-('Triceps Pushdown',               'Εκτάσεις τρικεφάλων σε τροχαλία',      '{Push,Arms,Triceps}'),
-('Overhead Triceps Extension',     'Εκτάσεις τρικεφάλων πάνω από το κεφάλι', '{Push,Arms,Triceps}'),
-('Skull Crusher',                  'Γαλλικές πιέσεις',                     '{Push,Arms,Triceps}'),
-('Close-Grip Bench Press',         'Πιέσεις πάγκου με κλειστή λαβή',       '{Push,Arms,Triceps}'),
-('Triceps Dip',                    'Βυθίσεις για τρικέφαλους',             '{Push,Arms,Triceps}'),
-('Triceps Kickback',               'Εκτάσεις τρικεφάλων με αλτήρα (kickback)', '{Push,Arms,Triceps}'),
+('Triceps Pushdown',               'Εκτάσεις τρικεφάλων σε τροχαλία',      '{Push,Triceps}'),
+('Overhead Triceps Extension',     'Εκτάσεις τρικεφάλων πάνω από το κεφάλι', '{Push,Triceps}'),
+('Skull Crusher',                  'Γαλλικές πιέσεις',                     '{Push,Triceps}'),
+('Close-Grip Bench Press',         'Πιέσεις πάγκου με κλειστή λαβή',       '{Push,Triceps}'),
+('Triceps Dip',                    'Βυθίσεις για τρικέφαλους',             '{Push,Triceps}'),
+('Triceps Kickback',               'Εκτάσεις τρικεφάλων με αλτήρα (kickback)', '{Push,Triceps}'),
 -- Back
 ('Deadlift',                       'Άρσεις θανάτου',                       '{Pull,Back,Lower,Full Body}'),
 ('Pull-Up',                        'Έλξεις μονόζυγου',                     '{Pull,Upper,Back,Full Body}'),
-('Chin-Up',                        'Έλξεις με υπτιαλαβή',                  '{Pull,Back,Arms,Biceps}'),
+('Chin-Up',                        'Έλξεις με υπτιαλαβή',                  '{Pull,Back,Biceps}'),
 ('Lat Pulldown',                   'Έλξεις τροχαλίας εμπρός',              '{Pull,Upper,Back}'),
 ('Barbell Row',                    'Κωπηλατική με μπάρα',                  '{Pull,Upper,Back,Full Body}'),
 ('Dumbbell Row',                   'Κωπηλατική με αλτήρα',                 '{Pull,Upper,Back}'),
@@ -176,13 +191,13 @@ insert into exercise_seed values
 ('Shrugs',                         'Ανασηκώσεις ώμων (shrugs)',            '{Pull,Back}'),
 ('Back Extension',                 'Εκτάσεις οσφύος',                      '{Pull,Back,Lower}'),
 -- Biceps
-('Barbell Curl',                   'Κάμψεις δικεφάλων με μπάρα',           '{Pull,Arms,Biceps}'),
-('Dumbbell Curl',                  'Κάμψεις δικεφάλων με αλτήρες',         '{Pull,Upper,Arms,Biceps}'),
-('Hammer Curl',                    'Κάμψεις σφυριού',                      '{Pull,Arms,Biceps}'),
-('Preacher Curl',                  'Κάμψεις σε πάγκο Scott',               '{Pull,Arms,Biceps}'),
-('Cable Curl',                     'Κάμψεις δικεφάλων σε τροχαλία',        '{Pull,Arms,Biceps}'),
-('Incline Dumbbell Curl',          'Κάμψεις δικεφάλων σε κεκλιμένο πάγκο', '{Pull,Arms,Biceps}'),
-('Concentration Curl',             'Κάμψεις συγκέντρωσης',                 '{Pull,Arms,Biceps}'),
+('Barbell Curl',                   'Κάμψεις δικεφάλων με μπάρα',           '{Pull,Biceps}'),
+('Dumbbell Curl',                  'Κάμψεις δικεφάλων με αλτήρες',         '{Pull,Upper,Biceps}'),
+('Hammer Curl',                    'Κάμψεις σφυριού',                      '{Pull,Biceps}'),
+('Preacher Curl',                  'Κάμψεις σε πάγκο Scott',               '{Pull,Biceps}'),
+('Cable Curl',                     'Κάμψεις δικεφάλων σε τροχαλία',        '{Pull,Biceps}'),
+('Incline Dumbbell Curl',          'Κάμψεις δικεφάλων σε κεκλιμένο πάγκο', '{Pull,Biceps}'),
+('Concentration Curl',             'Κάμψεις συγκέντρωσης',                 '{Pull,Biceps}'),
 -- Legs
 ('Back Squat',                     'Καθίσματα με μπάρα',                   '{Legs,Lower,Full Body}'),
 ('Front Squat',                    'Εμπρόσθια καθίσματα',                  '{Legs,Lower}'),
@@ -212,7 +227,13 @@ insert into exercise_seed values
 ('Ab Wheel Rollout',               'Ροδάκι κοιλιακών',                     '{Core}'),
 ('Russian Twist',                  'Ρώσικες περιστροφές',                  '{Core}'),
 ('Pallof Press',                   'Pallof press',                         '{Core}'),
-('Plank',                          'Σανίδα (plank)', '{Core,Lower,Full Body}');
+('Plank',                          'Σανίδα (plank)', '{Core,Lower,Full Body}'),
+('Side Plank',                     'Πλάγια σανίδα',                        '{Core}'),
+('Hollow Body Hold',               'Στατική θέση hollow',                  '{Core}'),
+('Wall Sit',                       'Κάθισμα στον τοίχο',                   '{Legs,Lower}'),
+('Dead Hang',                      'Κρέμαση από μονόζυγο',                 '{Pull,Back}'),
+('Farmer''s Carry',                'Μεταφορά αγρότη (farmer''s carry)',    '{Full Body}'),
+('Jump Rope',                      'Σχοινάκι',                             '{Full Body}');
 
 -- Add missing exercises; fill Greek names on existing ones.
 insert into public.exercises (exercise_name, exercise_name_el)
@@ -234,5 +255,37 @@ cross join lateral unnest(s.split_names) as sn (split_name)
 join public.exercises e on lower(e.exercise_name) = lower(s.name_en)
 join public.splits sp   on sp.split_name = sn.split_name
 on conflict do nothing;
+
+-- Biceps and Triceps are separate splits: retire the old combined "Arms" split.
+-- Exercises that were only in Arms move to Biceps or Triceps (guessed from the
+-- name, else both); past workouts tagged Arms get both, so history keeps them.
+insert into public.exercise_splits (exercise_id, split_id)
+select es.exercise_id, sp.split_id
+from public.exercise_splits es
+join public.splits a    on a.split_id = es.split_id and a.split_name = 'Arms'
+join public.exercises e on e.exercise_id = es.exercise_id
+join public.splits sp   on sp.split_name in ('Biceps', 'Triceps')
+where not exists (select 1 from public.exercise_splits x
+                  join public.splits xs on xs.split_id = x.split_id
+                  where x.exercise_id = es.exercise_id and xs.split_name in ('Biceps', 'Triceps'))
+  and case when e.exercise_name ~* 'curl|bicep|chin' then sp.split_name = 'Biceps'
+           when e.exercise_name ~* 'tricep|extension|push-?down|dip|kickback|skull|close-grip' then sp.split_name = 'Triceps'
+           else true end
+on conflict do nothing;
+
+insert into public.workout_splits (workout_id, split_id)
+select ws.workout_id, sp.split_id
+from public.workout_splits ws
+join public.splits a  on a.split_id = ws.split_id and a.split_name = 'Arms'
+join public.splits sp on sp.split_name in ('Biceps', 'Triceps')
+on conflict do nothing;
+
+delete from public.splits where split_name = 'Arms';   -- its exercise & workout links go with it
+
+update public.exercises
+set measure = 'time'
+where lower(exercise_name) in ('plank', 'side plank', 'hollow body hold', 'wall sit',
+                               'dead hang', 'farmer''s carry', 'jump rope')
+  and measure <> 'time';
 
 commit;

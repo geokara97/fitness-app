@@ -28,16 +28,29 @@
         </div>
 
         <div class="grid cols-3">
-            <div class="stat"><div class="label" data-i18n="hist.total">Total workouts</div><div class="value" id="h-total">—</div></div>
-            <div class="stat"><div class="label" data-i18n="hist.time">Total time trained</div><div class="value" id="h-time">—</div></div>
-            <div class="stat"><div class="label" data-i18n="hist.cals">Total calories burned</div><div class="value" id="h-cals">—</div></div>
+            <div class="stat"><div class="label" data-i18n="hist.monthWorkouts">Workouts this month</div><div class="value" id="h-total">—</div></div>
+            <div class="stat"><div class="label" data-i18n="hist.monthTime">Time this month</div><div class="value" id="h-time">—</div></div>
+            <div class="stat"><div class="label" data-i18n="hist.monthCals">Calories this month</div><div class="value" id="h-cals">—</div></div>
         </div>
 
-        <div class="section-title" data-i18n="hist.sessions">📜 Sessions</div>
+        <!-- Month calendar: days with workouts are marked; tap a day to see its week -->
+        <div class="card hist-cal" id="hist-cal">
+            <div class="cal-head">
+                <button type="button" class="icon-btn day-step" id="cal-prev" data-i18n-title="hist.prevMonth" aria-label="Previous month"><svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true"><path d="M8 2L2 8l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <strong id="cal-title"></strong>
+                <button type="button" class="icon-btn day-step" id="cal-next" data-i18n-title="hist.nextMonth" aria-label="Next month"><svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true"><path d="M2 2l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+            <div class="cal-weekdays" id="cal-weekdays"></div>
+            <div class="cal-grid" id="cal-grid"></div>
+            <button type="button" class="btn btn-ghost btn-sm cal-today" id="cal-today" hidden data-i18n="np.goToday">Today</button>
+        </div>
+
+        <div class="section-title" id="week-title"></div>
+        <div class="wk-chips week-sum" id="week-sum"></div>
         <div id="workout-list"></div>
         <div id="workout-empty" class="empty" style="display:none">
             <div class="icon">🏋️</div>
-            <p data-i18n="hist.empty">No workouts logged yet.</p>
+            <p data-i18n="hist.emptyWeek">No workouts this week.</p>
             <a href="workout.html" class="btn btn-primary" style="margin-top:10px" data-i18n="hist.start">Start a Workout</a>
         </div>
     </div>
@@ -48,6 +61,7 @@
     <script src="config.js"></script>
     <script src="motion.js"></script>
     <script src="workout-session.js"></script>
+    <script src="exercises-common.js"></script>
     <script src="history-page.js"></script>
 </body>
 </html>

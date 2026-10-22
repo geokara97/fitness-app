@@ -45,6 +45,13 @@
                     <label data-i18n="wo.nxSplits">Belongs to these splits</label>
                     <div class="slot-checks" id="lib-splits"></div>
                 </div>
+                <div class="form-group">
+                    <label for="lib-measure" data-i18n="wo.nxMeasure">Logged as</label>
+                    <select id="lib-measure">
+                        <option value="reps" data-i18n="wo.measureReps">Reps (and weight)</option>
+                        <option value="time" data-i18n="wo.measureTime">Time — e.g. plank (and weight)</option>
+                    </select>
+                </div>
                 <div class="btn-row">
                     <button type="submit" class="btn btn-primary" id="lib-save" data-i18n="wo.nxSave">Save exercise</button>
                     <button type="button" class="btn btn-ghost" id="lib-cancel" hidden data-i18n="lib.cancelEdit">Cancel</button>

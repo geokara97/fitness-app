@@ -2157,3 +2157,43 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 .wk-actions { display: flex; gap: 8px; margin-top: 12px; }
 .wk-actions .btn { flex: 1; }
 .wk-delete { color: var(--danger-text); }
+
+/* ---- Timed exercises: seconds instead of reps ---------------- */
+.exercise-block .set-time { display: none; }
+.exercise-block.timed .set-reps { display: none; }
+.exercise-block.timed .set-time { display: block; }
+
+/* ---- Workout history: month calendar ---------------------- */
+.hist-cal { padding: 14px; margin-top: 14px; }
+.cal-head { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cal-head strong { text-align: center; font-size: 1.05rem; text-transform: capitalize; }
+.cal-weekdays, .cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cal-weekdays span { text-align: center; font-size: .7rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; padding: 4px 0; }
+.cal-week { border-radius: 12px; transition: background-color .2s; }
+.cal-week.selected { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.cal-day {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: 42px;
+    border: none;
+    background: none;
+    font: inherit;
+    font-family: var(--font-num);
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 12px;
+    transition: transform 200ms var(--ease-out);
+}
+.cal-day:active { transform: scale(.9); transition-duration: 100ms; }
+.cal-day span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; }
+.cal-day.other { color: var(--text-faint); }
+.cal-day.today span { box-shadow: inset 0 0 0 2px var(--danger); color: var(--danger-text); }
+.cal-day.has span { background: color-mix(in srgb, var(--primary-bright) 20%, transparent); }
+.cal-dot { position: absolute; bottom: 2px; width: 5px; height: 5px; border-radius: 999px; background: var(--primary-bright); }
+.cal-dot.many { box-shadow: -7px 0 0 var(--primary-bright), 7px 0 0 var(--primary-bright); }
+.cal-today { display: block; margin: 8px auto 0; }
+.week-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+.week-sum:empty { display: none; }

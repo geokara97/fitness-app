@@ -5,7 +5,29 @@
 document.addEventListener('DOMContentLoaded', () => {
     renderNav('exercise');
     document.getElementById('workout-list').addEventListener('click', onWorkoutClick);
-    loadHistory();
+
+    // Calendar: tap a day for its week; arrows or a swipe change the month.
+    document.getElementById('cal-grid').addEventListener('click', e => {
+        const day = e.target.closest('.cal-day');
+        if (!day) return;
+        const d = day.dataset.day;
+        if (monthOf(d) !== calMonth) { showMonth(monthOf(d), mondayOfIso(d)); return; }
+        selectedWeek = mondayOfIso(d);
+        renderCalendar();
+        renderWeek();
+        if (typeof springIn === 'function') springIn(document.getElementById('workout-list'), 1, 12);
+    });
+    const stepMonth = n => {
+        showMonth(addMonths(calMonth, n));
+        if (typeof springIn === 'function') springIn(document.getElementById('cal-grid'), n);
+    };
+    document.getElementById('cal-prev').addEventListener('click', () => stepMonth(-1));
+    document.getElementById('cal-next').addEventListener('click', () => stepMonth(1));
+    document.getElementById('cal-today').addEventListener('click', () => showMonth(monthOf(todayISO())));
+    if (typeof attachSwipe === 'function') {
+        attachSwipe(document.getElementById('hist-cal'), { onLeft: () => stepMonth(1), onRight: () => stepMonth(-1) });
+    }
+    showMonth(monthOf(todayISO()));
 });
 
 function onWorkoutClick(e) {
@@ -28,10 +50,52 @@ function durationLabel(seconds) {
     return t('hist.hm', { h: Math.floor(m / 60), m: m % 60 });
 }
 
+// ---- Calendar state ------------------------------------------
+// The month on screen, and the week (Monday) whose sessions are listed.
+let calMonth = null;          // 'YYYY-MM-01'
+let selectedWeek = null;      // Monday 'YYYY-MM-DD'
+let calWorkouts = [];         // every workout in the calendar grid
+
+function isoOf(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function addDaysIso(iso, n) {
+    const d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return isoOf(d);
+}
+function mondayOfIso(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return isoOf(d);
+}
+function monthOf(iso) { return iso.slice(0, 8) + '01'; }
+function addMonths(monthIso, n) {
+    const d = new Date(monthIso + 'T00:00:00');
+    d.setMonth(d.getMonth() + n);
+    return isoOf(d);
+}
+// Monday before (or on) the 1st, through the Sunday after (or on) the last day.
+function gridRange(monthIso) {
+    const start = mondayOfIso(monthIso);
+    const last = addDaysIso(addMonths(monthIso, 1), -1);
+    return { start, end: addDaysIso(mondayOfIso(last), 6) };
+}
+
+function showMonth(monthIso, week = null) {
+    calMonth = monthIso;
+    const today = todayISO();
+    // Current month: today's week; other months: the week of the 1st.
+    selectedWeek = week || (monthOf(today) === monthIso ? mondayOfIso(today) : mondayOfIso(monthIso));
+    loadHistory();
+}
+
 async function loadHistory() {
+    const { start, end } = gridRange(calMonth);
     const { data, error } = await db.from('workouts')
         .select(`*, workout_splits(splits(split_name, split_name_el, sort_order)),
                  workout_exercises(*, exercises(exercise_name, exercise_name_el))`)
+        .gte('workout_date', start).lte('workout_date', end)
         .order('workout_date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -39,25 +103,73 @@ async function loadHistory() {
         showToast(t('hist.loadError', { msg: error.message }), 'error');
         return;
     }
+    calWorkouts = data || [];
+    renderMonthStats();
+    renderCalendar();
+    renderWeek();
+}
 
-    const list = document.getElementById('workout-list');
-    const empty = document.getElementById('workout-empty');
+// Totals for the month on screen.
+function renderMonthStats() {
+    const inMonth = calWorkouts.filter(w => monthOf(w.workout_date) === calMonth);
+    document.getElementById('h-total').textContent = inMonth.length;
+    document.getElementById('h-time').textContent = durationLabel(inMonth.reduce((n, w) => n + (w.duration_seconds || 0), 0));
+    document.getElementById('h-cals').textContent = round(inMonth.reduce((n, w) => n + Number(w.calories_burned || 0), 0));
+}
 
-    if (!data || data.length === 0) {
-        list.innerHTML = '';
-        empty.style.display = 'block';
-        ['h-total', 'h-time', 'h-cals'].forEach(id => document.getElementById(id).textContent = '0');
-        return;
+function renderCalendar() {
+    const { start, end } = gridRange(calMonth);
+    const today = todayISO();
+    document.getElementById('cal-title').textContent =
+        new Date(calMonth + 'T00:00:00').toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' });
+    // Jan 1 2024 was a Monday: weekday names in the app's language.
+    document.getElementById('cal-weekdays').innerHTML = Array.from({ length: 7 }, (_, i) =>
+        `<span>${escapeHtml(new Date(2024, 0, 1 + i).toLocaleDateString(LOCALE, { weekday: 'short' }))}</span>`).join('');
+
+    const perDay = {};
+    calWorkouts.forEach(w => { perDay[w.workout_date] = (perDay[w.workout_date] || 0) + 1; });
+    let html = '';
+    for (let week = start; week <= end; week = addDaysIso(week, 7)) {
+        html += `<div class="cal-week ${week === selectedWeek ? 'selected' : ''}">`;
+        for (let i = 0; i < 7; i++) {
+            const day = addDaysIso(week, i);
+            const n = perDay[day] || 0;
+            const cls = [
+                'cal-day',
+                monthOf(day) !== calMonth ? 'other' : '',
+                day === today ? 'today' : '',
+                n ? 'has' : '',
+            ].join(' ');
+            html += `<button type="button" class="${cls}" data-day="${day}"
+                        aria-label="${escapeHtml(formatDate(day))}${n ? ' · ' + escapeHtml(t('hist.nWorkouts', { n })) : ''}">
+                        <span>${Number(day.slice(8))}</span>${n ? `<i class="cal-dot${n > 1 ? ' many' : ''}"></i>` : ''}</button>`;
+        }
+        html += '</div>';
     }
-    empty.style.display = 'none';
+    document.getElementById('cal-grid').innerHTML = html;
+    const onToday = monthOf(today) === calMonth && selectedWeek === mondayOfIso(today);
+    document.getElementById('cal-today').hidden = onToday;
+}
 
-    const totalSecs = data.reduce((s, w) => s + (w.duration_seconds || 0), 0);
-    const totalCals = data.reduce((s, w) => s + Number(w.calories_burned || 0), 0);
-    document.getElementById('h-total').textContent = data.length;
-    document.getElementById('h-time').textContent = durationLabel(totalSecs);
-    document.getElementById('h-cals').textContent = round(totalCals);
+// Sessions of the chosen week, with the week's totals.
+function renderWeek() {
+    const end = addDaysIso(selectedWeek, 6);
+    const week = calWorkouts.filter(w => w.workout_date >= selectedWeek && w.workout_date <= end);
+    const fmt = (iso, opts) => new Date(iso + 'T00:00:00').toLocaleDateString(LOCALE, opts);
+    const sameMonth = selectedWeek.slice(0, 7) === end.slice(0, 7);
+    document.getElementById('week-title').textContent = '📅 ' + (selectedWeek === mondayOfIso(todayISO())
+        ? t('hist.thisWeek')
+        : `${fmt(selectedWeek, sameMonth ? { day: 'numeric' } : { day: 'numeric', month: 'short' })} – ${fmt(end, { day: 'numeric', month: 'short' })}`);
 
-    list.innerHTML = data.map(renderWorkout).join('');
+    const secs = week.reduce((n, w) => n + (w.duration_seconds || 0), 0);
+    const kcal = week.reduce((n, w) => n + Number(w.calories_burned || 0), 0);
+    document.getElementById('week-sum').innerHTML = week.length ? `
+        <span class="wk-chip">💪 ${escapeHtml(t('hist.nWorkouts', { n: week.length }))}</span>
+        <span class="wk-chip">⏱ ${escapeHtml(durationLabel(secs))}</span>
+        <span class="wk-chip wk-kcal">🔥 ${round(kcal)} kcal</span>` : '';
+
+    document.getElementById('workout-list').innerHTML = week.map(renderWorkout).join('');
+    document.getElementById('workout-empty').style.display = week.length ? 'none' : 'block';
 }
 
 // Sessions are compact cards: date, splits, duration, calories and counts;
@@ -100,7 +212,8 @@ function renderWorkout(w) {
                 ${ex.sets.sort((a, b) => (a.set_number || 0) - (b.set_number || 0)).map((st, i) => `
                     <li>
                         <span class="wk-set-no">${st.set_number || i + 1}</span>
-                        <span class="wk-set-reps">${st.reps ? escapeHtml(t('hist.reps', { n: st.reps })) : '–'}</span>
+                        <span class="wk-set-reps">${st.duration_seconds ? '⏱ ' + escapeHtml(formatDuration(st.duration_seconds))
+                            : st.reps ? escapeHtml(t('hist.reps', { n: st.reps })) : '–'}</span>
                         <span class="wk-set-kg">${st.weight ? `${st.weight} kg` : ''}</span>
                     </li>`).join('')}
             </ol>

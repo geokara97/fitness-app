@@ -54,6 +54,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelector('.container').addEventListener('input', e => {
         if (e.target.id !== 'w-calories') scheduleDraftSave();
     });
+    document.getElementById('exercises').addEventListener('change', e => {
+        if (e.target.matches('.ex-select')) applyMeasure(e.target.closest('.exercise-block'));
+    });
     initNewExerciseModal();
 
     if (!EDIT_ID) {
@@ -105,7 +108,8 @@ async function loadWorkoutForEdit() {
     (ordered.length ? ordered : [{ exerciseId: '', sets: [] }]).forEach(b => addExerciseBlock(
         b.exerciseId ? Number(b.exerciseId) : '',
         b.sets.sort((x, y) => (x.set_number || 0) - (y.set_number || 0))
-              .map(s => ({ reps: s.reps ?? '', weight: s.weight ?? '' }))));
+              .map(s => ({ reps: s.reps ?? '', weight: s.weight ?? '',
+                           time: s.duration_seconds ? formatDuration(s.duration_seconds).replace(' s', '') : '' }))));
 
     // Calories that differ from the duration-based estimate were entered by hand (e.g. a smartwatch).
     const durationSec = w.duration_seconds || 0;
@@ -146,6 +150,7 @@ function collectDraft() {
             exerciseId: block.querySelector('.ex-select').value,
             sets: [...block.querySelectorAll('.set-row')].map(row => ({
                 reps: row.querySelector('.set-reps').value,
+                time: row.querySelector('.set-time').value,
                 weight: row.querySelector('.set-weight').value,
             })),
         })),
@@ -154,7 +159,7 @@ function collectDraft() {
 
 function draftHasContent(d) {
     return !!d && (d.notes || (d.splits && d.splits.length) ||
-        (d.blocks || []).some(b => b.exerciseId || b.sets.some(s => s.reps || s.weight)));
+        (d.blocks || []).some(b => b.exerciseId || b.sets.some(s => s.reps || s.time || s.weight)));
 }
 
 function saveDraft() {
@@ -300,7 +305,12 @@ function countLoggedSets() {
     return [...document.querySelectorAll('.exercise-block')]
         .filter(b => b.querySelector('.ex-select').value)
         .reduce((n, b) => n + [...b.querySelectorAll('.set-row')]
-            .filter(r => r.querySelector('.set-reps').value || r.querySelector('.set-weight').value).length, 0);
+            .filter(r => setHasValue(r, b.classList.contains('timed'))).length, 0);
+}
+
+function setHasValue(row, timed) {
+    return !!((timed ? row.querySelector('.set-time').value : row.querySelector('.set-reps').value)
+        || row.querySelector('.set-weight').value);
 }
 
 // Duration & typed calories come from the live session, or from the saved workout in edit mode.
@@ -386,6 +396,13 @@ function addExerciseBlock(selectedId, sets) {
     `;
     document.getElementById('exercises').appendChild(block);
     (Array.isArray(sets) && sets.length ? sets : [{}]).forEach(set => addSet(id, set));
+    applyMeasure(block);
+}
+
+// A timed exercise (plank…) asks for seconds instead of reps.
+function applyMeasure(block) {
+    const ex = exercises.find(e => String(e.exercise_id) === block.querySelector('.ex-select').value);
+    block.classList.toggle('timed', isTimedExercise(ex));
 }
 
 function removeExerciseBlock(id) {
@@ -402,6 +419,7 @@ function addSet(blockId, values = {}) {
     row.innerHTML = `
         <span class="set-tag">${t('wo.setN', { n: setNo })}</span>
         <input type="number" class="set-reps" min="1" placeholder="${t('wo.repsPh')}" value="${escapeHtml(values.reps || '')}">
+        <input type="text" class="set-time" inputmode="numeric" placeholder="${t('wo.timePh')}" value="${escapeHtml(values.time || '')}">
         <input type="text" class="set-weight" inputmode="decimal" placeholder="kg" value="${escapeHtml(values.weight || '')}">
         <button type="button" class="icon-btn" onclick="this.closest('.set-row').remove(); saveDraft();">×</button>
     `;
@@ -429,20 +447,23 @@ async function saveWorkout() {
     document.querySelectorAll('.exercise-block').forEach(block => {
         const exId = block.querySelector('.ex-select').value;
         if (!exId) return;
+        const timed = block.classList.contains('timed');
         order++;
         let setNo = 0;
         block.querySelectorAll('.set-row').forEach(row => {
+            if (!setHasValue(row, timed)) return;
             const reps = row.querySelector('.set-reps').value;
             const weight = row.querySelector('.set-weight').value;
-            if (!reps && !weight) return;
             setNo++;
-            exerciseRows.push({
+            const set = {
                 exercise_id: Number(exId),
                 exercise_order: order,
                 set_number: setNo,
-                reps: reps ? Number(reps) : null,
+                reps: !timed && reps ? Number(reps) : null,
                 weight: parseDecimal(weight),
-            });
+            };
+            if (timed) set.duration_seconds = parseDuration(row.querySelector('.set-time').value);
+            exerciseRows.push(set);
         });
     });
 
@@ -555,13 +576,14 @@ async function saveNewExercise(e) {
     const nameEn = document.getElementById('nx-name-en').value.trim();
     const nameEl = document.getElementById('nx-name-el').value.trim() || null;
     const splitIds = checkedSplitIds('nx-split');
+    const measure = document.getElementById('nx-measure').value;
     if (!nameEn) return;
     if (!splitIds.length) { showToast(t('wo.nxNeedSplit'), 'error'); return; }
 
     const btn = document.getElementById('nx-save');
     btn.disabled = true;
     try {
-        const ex = await createExercise({ nameEn, nameEl, splitIds });
+        const ex = await createExercise({ nameEn, nameEl, splitIds, measure });
         const newId = ex.exercise_id;
         exercises.push(ex);
         // Make sure the new exercise is visible with the current filter.
@@ -573,7 +595,8 @@ async function saveNewExercise(e) {
 
         // Drop it into the first empty exercise block, or a new one.
         const empty = [...document.querySelectorAll('.ex-select')].find(s => !s.value);
-        if (empty) empty.value = String(newId); else addExerciseBlock(newId);
+        if (empty) { empty.value = String(newId); applyMeasure(empty.closest('.exercise-block')); }
+        else addExerciseBlock(newId);
         saveDraft();
 
         document.getElementById('exercise-modal').classList.remove('show');

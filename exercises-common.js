@@ -47,10 +47,28 @@ async function replaceExerciseSplits(exerciseId, splitIds) {
     if (error) throw error;
 }
 
+// Timed exercises (plank, wall sit…) are logged in seconds instead of reps.
+function isTimedExercise(ex) { return !!ex && ex.measure === 'time'; }
+
+// "90", "90s" or "1:30" -> 90 seconds; null when empty or invalid.
+function parseDuration(value) {
+    const v = String(value ?? '').trim().replace(/\s*s(ec)?$/i, '');
+    if (!v) return null;
+    const m = v.match(/^(\d+):([0-5]?\d)$/);
+    const secs = m ? Number(m[1]) * 60 + Number(m[2]) : Number(v.replace(',', '.'));
+    return Number.isFinite(secs) && secs > 0 ? Math.round(secs) : null;
+}
+
+// 45 -> "45 s", 90 -> "1:30"
+function formatDuration(secs) {
+    secs = Math.round(Number(secs) || 0);
+    return secs < 60 ? `${secs} s` : `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}
+
 // Insert a user exercise and link it to its splits. Rolls back on failure.
-async function createExercise({ nameEn, nameEl, splitIds }) {
+async function createExercise({ nameEn, nameEl, splitIds, measure = 'reps' }) {
     const { data: ex, error } = await db.from('exercises')
-        .insert([{ exercise_name: nameEn, exercise_name_el: nameEl || null, is_custom: true }])
+        .insert([{ exercise_name: nameEn, exercise_name_el: nameEl || null, is_custom: true, measure }])
         .select().single();
     if (error) throw error;
     try {
@@ -62,9 +80,9 @@ async function createExercise({ nameEn, nameEl, splitIds }) {
     return { ...ex, splitIds };
 }
 
-async function updateExercise(exerciseId, { nameEn, nameEl, splitIds }) {
+async function updateExercise(exerciseId, { nameEn, nameEl, splitIds, measure = 'reps' }) {
     const { data: ex, error } = await db.from('exercises')
-        .update({ exercise_name: nameEn, exercise_name_el: nameEl || null })
+        .update({ exercise_name: nameEn, exercise_name_el: nameEl || null, measure })
         .eq('exercise_id', exerciseId)
         .select().single();
     if (error) throw error;
@@ -74,5 +92,7 @@ async function updateExercise(exerciseId, { nameEn, nameEl, splitIds }) {
 
 // Friendly message for exercise save errors.
 function exerciseErrorMessage(err) {
-    return err.code === '23505' ? t('wo.nxDuplicate') : t('common.errorSaving', { msg: err.message });
+    if (err.code === '23505') return t('wo.nxDuplicate');
+    if (/measure|duration_seconds/.test(err.message || '')) return t('wo.timedDbMissing');   // exercises_schema.sql not re-run
+    return t('common.errorSaving', { msg: err.message });
 }

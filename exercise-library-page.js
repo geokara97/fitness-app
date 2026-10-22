@@ -42,6 +42,7 @@ function startEdit(ex) {
     editingId = ex.exercise_id;
     document.getElementById('lib-name-en').value = ex.exercise_name;
     document.getElementById('lib-name-el').value = ex.exercise_name_el || '';
+    document.getElementById('lib-measure').value = isTimedExercise(ex) ? 'time' : 'reps';
     document.getElementById('lib-splits').innerHTML = splitChecksHtml(libSplits, new Set(ex.splitIds), 'lib-split');
     document.getElementById('lib-form-title').textContent = t('lib.editTitle', { name: exerciseLabel(ex) });
     document.getElementById('lib-cancel').hidden = false;
@@ -54,6 +55,7 @@ async function saveExercise(e) {
     const fields = {
         nameEn: document.getElementById('lib-name-en').value.trim(),
         nameEl: document.getElementById('lib-name-el').value.trim(),
+        measure: document.getElementById('lib-measure').value,
         splitIds: checkedSplitIds('lib-split'),
     };
     if (!fields.nameEn) return;
