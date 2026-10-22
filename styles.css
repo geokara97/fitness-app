@@ -1384,7 +1384,6 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 .e-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--fill); }
 .e-eaten .e-dot  { background: var(--accent); }
 .e-burned .e-dot { background: var(--primary-bright); }
-.e-left .e-dot   { background: var(--teal); }
 .e-name { color: var(--text-soft); font-weight: 500; }
 .e-target { margin-top: -2px; }
 .energy-hint {
@@ -2209,3 +2208,17 @@ input[type="date"] {
 }
 input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
 .lr-input[type="date"], .lr-input[type="date"]::-webkit-date-and-time-value { text-align: right; }
+
+/* Energy card: calories left to eat, featured above eaten / burned */
+.e-left-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--teal) 12%, transparent);
+}
+.e-left-label { font-size: .75rem; font-weight: 600; color: var(--text-soft); line-height: 1.25; }
+.e-left-card strong { font-family: var(--font-num); font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.e-left-card strong.bad { color: var(--danger-text); }
+.e-left-card:has(strong.bad) { background: color-mix(in srgb, var(--danger) 10%, transparent); }

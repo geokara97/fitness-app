@@ -341,8 +341,9 @@ async function refreshBreakdown(date) {
     // Calories still to eat before reaching the daily target
     const leftEl = document.getElementById('bd-left');
     const left = target - (eaten || 0);
-    leftEl.textContent = `${left < 0 ? '+' : ''}${Math.abs(round(left)).toLocaleString(LOCALE)}`;
+    leftEl.textContent = `${Math.abs(round(left)).toLocaleString(LOCALE)} kcal`;
     leftEl.classList.toggle('bad', left < 0);
+    document.getElementById('bd-left-label').textContent = t(left < 0 ? 'trk.overTarget' : 'trk.leftToEat');
 
     const hint = document.getElementById('bd-hint');
     if (eaten === null) hint.textContent = t('trk.enterCalories');
