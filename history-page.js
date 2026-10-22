@@ -4,8 +4,23 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     renderNav('exercise');
+    document.getElementById('workout-list').addEventListener('click', onWorkoutClick);
     loadHistory();
 });
+
+function onWorkoutClick(e) {
+    const btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    if (btn.dataset.act === 'delete') { deleteWorkout(id); return; }
+    if (btn.dataset.act === 'toggle') {
+        const open = !openWorkouts.has(id);
+        if (open) openWorkouts.add(id); else openWorkouts.delete(id);
+        btn.closest('.wk-card').classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open);
+        document.getElementById('wk-body-' + id).hidden = !open;
+    }
+}
 
 function durationLabel(seconds) {
     const m = Math.round((seconds || 0) / 60);
@@ -45,6 +60,10 @@ async function loadHistory() {
     list.innerHTML = data.map(renderWorkout).join('');
 }
 
+// Sessions are compact cards: date, splits, duration, calories and counts;
+// tapping one opens its exercises and sets.
+const openWorkouts = new Set();
+
 function renderWorkout(w) {
     // Group sets by exercise (order).
     const groups = {};
@@ -62,45 +81,59 @@ function renderWorkout(w) {
         groups[key].sets.push(we);
     });
     const exList = Object.values(groups).sort((a, b) => a.order - b.order);
+    const setCount = exList.reduce((n, ex) => n + ex.sets.length, 0);
 
-    const splitBadges = (w.workout_splits || [])
+    const splits = (w.workout_splits || [])
         .map(ws => ws.splits).filter(Boolean)
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .map(s => `<span class="badge blue" style="margin-left:6px">${escapeHtml((LANG === 'el' && s.split_name_el) || s.split_name)}</span>`)
-        .join('');
+        .sort((a, b) => a.sort_order - b.sort_order);
+    const splitBadges = splits.length
+        ? splits.map(sp => `<span class="badge blue">${escapeHtml((LANG === 'el' && sp.split_name_el) || sp.split_name)}</span>`).join('')
+        : `<span class="muted text-sm">${escapeHtml(t('hist.noSplit'))}</span>`;
 
-    const exHtml = exList.length ? `
-        <div class="exercise-list" style="margin-top:10px">
-            ${exList.map(ex => `
-                <div style="margin-bottom:8px">
-                    <strong>${escapeHtml(ex.name)}</strong>
-                    <div class="muted text-sm">
-                        ${ex.sets.sort((a, b) => (a.set_number || 0) - (b.set_number || 0))
-                            .map((s, i) => t('hist.set', { n: s.set_number || i + 1, reps: s.reps || '–' }) + (s.weight ? ' × ' + s.weight + ' kg' : ''))
-                            .join('  ·  ')}
-                    </div>
-                </div>`).join('')}
-        </div>` : `<p class="muted text-sm" style="margin-top:8px">${t('hist.noExercises')}</p>`;
+    const exHtml = exList.length ? exList.map(ex => `
+        <div class="wk-ex">
+            <div class="wk-ex-head">
+                <strong>${escapeHtml(ex.name)}</strong>
+                <span class="muted text-sm">${escapeHtml(t('hist.setsCount', { n: ex.sets.length }))}</span>
+            </div>
+            <ol class="wk-sets">
+                ${ex.sets.sort((a, b) => (a.set_number || 0) - (b.set_number || 0)).map((st, i) => `
+                    <li>
+                        <span class="wk-set-no">${st.set_number || i + 1}</span>
+                        <span class="wk-set-reps">${st.reps ? escapeHtml(t('hist.reps', { n: st.reps })) : '–'}</span>
+                        <span class="wk-set-kg">${st.weight ? `${st.weight} kg` : ''}</span>
+                    </li>`).join('')}
+            </ol>
+        </div>`).join('')
+        : `<p class="muted text-sm">${escapeHtml(t('hist.noExercises'))}</p>`;
 
+    const open = openWorkouts.has(w.workout_id);
     return `
-        <div class="card" style="margin-bottom:14px">
-            <div class="flex-between">
-                <div>
-                    <strong style="font-size:1.05rem">${formatDate(w.workout_date)}</strong>
-                    ${splitBadges}
-                </div>
-                <span class="history-actions">
-                    <a class="icon-btn icon-btn-edit" href="workout.html?edit=${w.workout_id}" title="${t('hist.edit')}" aria-label="${t('hist.edit')}">✏️</a>
-                    <button class="icon-btn" title="${t('common.delete')}" onclick="deleteWorkout(${w.workout_id})">×</button>
+        <div class="card wk-card ${open ? 'open' : ''}">
+            <button type="button" class="wk-head" data-act="toggle" data-id="${w.workout_id}"
+                    aria-expanded="${open}" aria-controls="wk-body-${w.workout_id}">
+                <span class="wk-title">
+                    <strong class="wk-date">${escapeHtml(formatDate(w.workout_date))}</strong>
+                    <span class="wk-splits">${splitBadges}</span>
                 </span>
+                <span class="wk-chevron" aria-hidden="true"></span>
+                <span class="wk-chips">
+                    <span class="wk-chip">⏱ ${escapeHtml(durationLabel(w.duration_seconds))}</span>
+                    <span class="wk-chip wk-kcal">🔥 ${round(w.calories_burned)} kcal</span>
+                    <span class="wk-chip">💪 ${escapeHtml(t('hist.exCount', { n: exList.length, s: setCount }))}</span>
+                </span>
+            </button>
+            <div class="wk-body" id="wk-body-${w.workout_id}" ${open ? '' : 'hidden'}>
+                <div class="wk-meta">
+                    <span>${escapeHtml(t('hist.bodyweight'))}: <strong>${w.bodyweight ? escapeHtml(w.bodyweight + ' kg') : '—'}</strong></span>
+                    ${w.notes ? `<span>📝 ${escapeHtml(w.notes)}</span>` : ''}
+                </div>
+                ${exHtml}
+                <div class="wk-actions">
+                    <a class="btn btn-ghost btn-sm" href="workout.html?edit=${w.workout_id}" data-push>✏️ ${escapeHtml(t('hist.edit'))}</a>
+                    <button type="button" class="btn btn-ghost btn-sm wk-delete" data-act="delete" data-id="${w.workout_id}">🗑 ${escapeHtml(t('common.delete'))}</button>
+                </div>
             </div>
-            <div class="grid cols-3" style="margin:12px 0">
-                <div class="stat"><div class="label">${t('hist.duration')}</div><div class="value" style="font-size:1.2rem">${durationLabel(w.duration_seconds)}</div></div>
-                <div class="stat"><div class="label">${t('common.caloriesBurned')}</div><div class="value" style="font-size:1.2rem">🔥 ${round(w.calories_burned)}</div></div>
-                <div class="stat"><div class="label">${t('hist.bodyweight')}</div><div class="value" style="font-size:1.2rem">${w.bodyweight ? w.bodyweight + ' kg' : '—'}</div></div>
-            </div>
-            ${w.notes ? `<p class="muted text-sm">📝 ${escapeHtml(w.notes)}</p>` : ''}
-            ${exHtml}
         </div>`;
 }
 
@@ -108,6 +141,7 @@ async function deleteWorkout(id) {
     if (!(await confirmToast(t('hist.confirmDelete'), { okText: t('common.delete') }))) return;
     const { error } = await db.from('workouts').delete().eq('workout_id', id);
     if (error) { showToast(t('common.error', { msg: error.message }), 'error'); return; }
+    openWorkouts.delete(id);
     showToast(t('hist.deleted'));
     loadHistory();
 }

@@ -476,6 +476,10 @@ const STRINGS = {
         'hist.confirmDelete': 'Delete this workout? Its calories will no longer count toward that day.',
         'hist.deleted': 'Workout deleted',
         'hist.edit': 'Edit workout',
+        'hist.noSplit': 'No split chosen',
+        'hist.exCount': '{n} exercises · {s} sets',
+        'hist.setsCount': '{n} sets',
+        'hist.reps': '{n} reps',
 
         // ---- Exercise hub ----
         'ex.title': 'Metron — Exercise',
@@ -1022,6 +1026,10 @@ const STRINGS = {
         'hist.confirmDelete': 'Διαγραφή αυτής της προπόνησης; Οι θερμίδες της δεν θα μετράνε πλέον για εκείνη την ημέρα.',
         'hist.deleted': 'Η προπόνηση διαγράφηκε',
         'hist.edit': 'Επεξεργασία προπόνησης',
+        'hist.noSplit': 'Χωρίς split',
+        'hist.exCount': '{n} ασκήσεις · {s} σετ',
+        'hist.setsCount': '{n} σετ',
+        'hist.reps': '{n} επαν.',
 
         // ---- Exercise hub ----
         'ex.title': 'Metron — Άσκηση',
