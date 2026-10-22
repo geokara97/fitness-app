@@ -370,7 +370,7 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
-.form-row .form-group { flex: 1; min-width: 130px; }
+.form-row .form-group { flex: 1 1 130px; min-width: 0; }   /* min-width 0: a field never pushes into its neighbour */
 .hint { font-size: .78rem; color: var(--text-soft); margin: 6px 4px 0; line-height: 1.35; }
 
 /* ---- Buttons -----------------------------------------------
@@ -2193,7 +2193,19 @@ hr { border: none; border-top: .5px solid var(--border); margin: 16px 0; }
 .cal-day.today span { box-shadow: inset 0 0 0 2px var(--danger); color: var(--danger-text); }
 .cal-day.has span { background: color-mix(in srgb, var(--primary-bright) 20%, transparent); }
 .cal-dot { position: absolute; bottom: 2px; width: 5px; height: 5px; border-radius: 999px; background: var(--primary-bright); }
-.cal-dot.many { box-shadow: -7px 0 0 var(--primary-bright), 7px 0 0 var(--primary-bright); }
 .cal-today { display: block; margin: 8px auto 0; }
 .week-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
 .week-sum:empty { display: none; }
+
+/* iPhone Safari gives date fields a built-in minimum width that ignores width: 100%,
+   so in a row they overflow into the next field. Let them shrink like other inputs. */
+input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    text-align: left;
+}
+input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+.lr-input[type="date"], .lr-input[type="date"]::-webkit-date-and-time-value { text-align: right; }

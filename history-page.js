@@ -142,7 +142,7 @@ function renderCalendar() {
             ].join(' ');
             html += `<button type="button" class="${cls}" data-day="${day}"
                         aria-label="${escapeHtml(formatDate(day))}${n ? ' · ' + escapeHtml(t('hist.nWorkouts', { n })) : ''}">
-                        <span>${Number(day.slice(8))}</span>${n ? `<i class="cal-dot${n > 1 ? ' many' : ''}"></i>` : ''}</button>`;
+                        <span>${Number(day.slice(8))}</span>${n ? `<i class="cal-dot"></i>` : ''}</button>`;
         }
         html += '</div>';
     }
